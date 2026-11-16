@@ -1,0 +1,121 @@
+{
+  "name": "inlinetex",
+  "displayName": "InlineTeX",
+  "description": "Édition WYSIWYG en ligne pour LaTeX : formules rendues et mise en forme directement dans l'éditeur, source révélé sous le curseur.",
+  "version": "0.1.0",
+  "publisher": "inlinetex",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "latex",
+    "tex",
+    "wysiwyg",
+    "math",
+    "mathjax",
+    "inline preview"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:latex",
+    "onLanguage:tex",
+    "onLanguage:markdown"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "inlineTeX.toggle",
+        "title": "Activer / désactiver le rendu en ligne",
+        "category": "InlineTeX"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "inlineTeX.toggle",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && inlineTeX.languageActive"
+      }
+    ],
+    "configuration": {
+      "title": "InlineTeX",
+      "properties": {
+        "inlineTeX.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Active le rendu en ligne."
+        },
+        "inlineTeX.languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "latex",
+            "tex"
+          ],
+          "description": "Identifiants de langage où le rendu s'applique (ajoutez « markdown » pour les formules $…$ en Markdown)."
+        },
+        "inlineTeX.renderMath": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remplace les formules ($…$, \\[…\\], equation, align…) par leur rendu."
+        },
+        "inlineTeX.renderFormatting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Applique la mise en forme (\\textbf, \\emph, \\section…) en masquant les commandes."
+        },
+        "inlineTeX.revealOn": {
+          "type": "string",
+          "enum": [
+            "cursor",
+            "line"
+          ],
+          "enumDescriptions": [
+            "Le source réapparaît quand le curseur ou la sélection touche l'élément.",
+            "Le source réapparaît pour toute la ligne où se trouve le curseur."
+          ],
+          "default": "cursor",
+          "description": "Quand afficher le source LaTeX à la place du rendu."
+        },
+        "inlineTeX.scale": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.5,
+          "maximum": 3,
+          "description": "Facteur d'échelle des formules rendues."
+        },
+        "inlineTeX.color": {
+          "type": "string",
+          "default": "",
+          "description": "Couleur CSS des formules (vide : déduite du thème clair ou sombre)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies --no-rewrite-relative-links",
+    "vscode:prepublish": "node esbuild.mjs --production"
+  },
+  "dependencies": {
+    "mathjax-full": "^3.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

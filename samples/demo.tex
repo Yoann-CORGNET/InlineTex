@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\DeclareMathOperator{\tr}{tr}
+
+\begin{document}
+
+\section{Introduction}
+
+Soit $f : \R \to \R$ une fonction \textbf{continue}, et $\norm{x}$ la norme de $x$.
+On note \emph{trace} l'opérateur $\tr(A) = \sum_i a_{ii}$, avec $\frac{a}{b}$ en ligne.
+
+\subsection{Formules centrées}
+
+$$ \int_0^1 x^2 \, dx = \frac{1}{3} $$
+
+\[
+  e^{i\pi} + 1 = 0
+\]
+
+\begin{align*}
+  (a+b)^2 &= a^2 + 2ab + b^2 \\
+  \det \begin{pmatrix} a & b \\ c & d \end{pmatrix} &= ad - bc
+\end{align*}
+
+\subsection{Listes et mise en forme}
+
+\begin{itemize}
+  \item du texte en \textit{italique} et \underline{souligné} ;
+  \item du code : \texttt{main()} ;
+  \item une erreur volontaire : $\frac{1}{$ ;
+  \item un prix échappé : 5\$ (pas de formule).
+\end{itemize}
+
+% Commentaire : $x$ n'est pas rendu ici.
+\begin{verbatim}
+$ pas de rendu dans verbatim $
+\end{verbatim}
+
+\end{document}
