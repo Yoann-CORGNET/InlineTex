@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { scan, type MathToken, type FormatToken } from '../src/parser/scan';
+import { cssColor, matchBrace, scan, type FormatToken, type MathToken, type SymbolToken } from '../src/parser/scan';
 import { collectMacros } from '../src/parser/macros';
 
 const math = (src: string) => scan(src).filter((t): t is MathToken => t.type === 'math');
 const formats = (src: string) => scan(src).filter((t): t is FormatToken => t.type === 'format');
+const symbols = (src: string) => scan(src).filter((t): t is SymbolToken => t.type === 'symbol');
 
 describe('scan: math', () => {
   it('finds inline $...$', () => {
@@ -118,6 +119,86 @@ describe('scan: formatting', () => {
   it('turns \\item into a bullet', () => {
     const t = scan('\\item un');
     expect(t[0]).toMatchObject({ type: 'symbol', text: '•', start: 0, end: 5 });
+  });
+
+  it('shows the label of \\item[...] in bold', () => {
+    const src = '\\item[Note $x$] texte';
+    const [f] = formats(src);
+    expect(f.kind).toBe('bold');
+    expect(src.slice(f.argStart, f.argEnd)).toBe('Note $x$');
+    expect(src.slice(f.start, f.end)).toBe('\\item[Note $x$]');
+    expect(math(src).map((m) => m.tex)).toEqual(['x']);
+  });
+
+  it('shows the full title of \\section[short]{full}', () => {
+    const src = '\\section[Court]{Titre complet}';
+    const [f] = formats(src);
+    expect(src.slice(f.argStart, f.argEnd)).toBe('Titre complet');
+    expect(f.end).toBe(src.length);
+  });
+
+  it('does not let an unclosed argument run past the paragraph', () => {
+    const src = '{\\textbf{abc\n\nsuite} fin}';
+    expect(formats(src)).toEqual([]);
+  });
+
+  it('reads \\textcolor with named and model colors', () => {
+    const src = '\\textcolor{red}{a} \\textcolor[HTML]{00FF00}{b} \\textcolor[rgb]{0,0,1}{c}';
+    expect(formats(src).map((f) => [f.kind, f.color, src.slice(f.argStart, f.argEnd)])).toEqual([
+      ['color', 'red', 'a'],
+      ['color', '#00FF00', 'b'],
+      ['color', 'rgb(0, 0, 255)', 'c'],
+    ]);
+  });
+
+  it('styles \\href text and \\url as links', () => {
+    const src = '\\href{https://a.b}{site} \\url{http://c.d/%7E}';
+    expect(formats(src).map((f) => [f.kind, f.target, src.slice(f.argStart, f.argEnd)])).toEqual([
+      ['link', 'https://a.b', 'site'],
+      ['link', 'http://c.d/%7E', 'http://c.d/%7E'],
+    ]);
+  });
+});
+
+describe('scan: references, notes and images', () => {
+  it('replaces references, citations and labels by their keys', () => {
+    const src = '\\ref{sec:a} \\eqref{eq:b} \\cite[p.~3]{knuth, lamport} \\label{fig:c}';
+    expect(symbols(src).map((t) => [t.style, t.text])).toEqual([
+      ['ref', 'sec:a'],
+      ['ref', '(eq:b)'],
+      ['ref', '[knuth, lamport]'],
+      ['label', 'fig:c'],
+    ]);
+  });
+
+  it('folds footnotes into numbered marks and does not scan their content', () => {
+    const src = 'a\\footnote{Voir $x$.} b\\footnote{Deux}';
+    expect(symbols(src).map((t) => [t.style, t.text, t.hover])).toEqual([
+      ['note', '¹', 'Voir $x$.'],
+      ['note', '²', 'Deux'],
+    ]);
+    expect(math(src)).toEqual([]);
+  });
+
+  it('finds \\includegraphics paths', () => {
+    const t = scan('\\includegraphics[width=0.5\\linewidth]{img/plot}');
+    expect(t).toMatchObject([{ type: 'image', path: 'img/plot' }]);
+  });
+});
+
+describe('matchBrace', () => {
+  it('can stop at a blank line', () => {
+    const src = '{a\n\n}';
+    expect(matchBrace(src, 0)).toBe(4);
+    expect(matchBrace(src, 0, true)).toBe(-1);
+  });
+});
+
+describe('cssColor', () => {
+  it('rejects what CSS cannot show', () => {
+    expect(cssColor(undefined, 'red!50')).toBeUndefined();
+    expect(cssColor('cmyk', '0,1,1,0')).toBeUndefined();
+    expect(cssColor('gray', '0.5')).toBe('rgb(128, 128, 128)');
   });
 });
 

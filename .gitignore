@@ -1,3 +1,17 @@
 node_modules/
 dist/
+dist-test/
+.vscode-test/
 *.vsix
+
+# Fichiers produits par la compilation LaTeX (latexmk, LaTeX Workshop)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+samples/*.pdf

@@ -32,6 +32,11 @@
         "command": "inlineTeX.toggle",
         "title": "Activer / désactiver le rendu en ligne",
         "category": "InlineTeX"
+      },
+      {
+        "command": "inlineTeX.toggleDocument",
+        "title": "Suspendre / reprendre le rendu pour ce fichier",
+        "category": "InlineTeX"
       }
     ],
     "keybindings": [
@@ -66,10 +71,20 @@
           "default": true,
           "description": "Remplace les formules ($…$, \\[…\\], equation, align…) par leur rendu."
         },
+        "inlineTeX.renderTables": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remplace les tableaux (tabular, tabular*, tabularx) par leur rendu."
+        },
         "inlineTeX.renderFormatting": {
           "type": "boolean",
           "default": true,
-          "description": "Applique la mise en forme (\\textbf, \\emph, \\section…) en masquant les commandes."
+          "description": "Applique la mise en forme (\\textbf, \\emph, \\section, \\textcolor, \\href…) et remplace \\ref, \\cite, \\label et \\footnote par un texte court, en masquant les commandes."
+        },
+        "inlineTeX.renderImages": {
+          "type": "boolean",
+          "default": true,
+          "description": "Affiche un aperçu des images de \\includegraphics (PNG, JPEG, GIF, SVG ; pas PDF ni EPS)."
         },
         "inlineTeX.revealOn": {
           "type": "string",
@@ -105,14 +120,19 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "package": "vsce package --no-dependencies --no-rewrite-relative-links",
-    "vscode:prepublish": "node esbuild.mjs --production"
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "lint": "biome lint",
+    "test:integration": "node esbuild.mjs --production && node test/integration/run.mjs"
   },
   "dependencies": {
-    "mathjax-full": "^3.2.2"
+    "@mathjax/mathjax-newcm-font": "^4.1.3",
+    "@mathjax/src": "^4.1.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^22.20.5",
     "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
