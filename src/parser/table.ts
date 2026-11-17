@@ -28,33 +28,57 @@ export function convertColumnSpec(spec: string): string {
   let out = '';
   let i = 0;
   while (i < spec.length) {
-    const c = spec[i];
-    if ('@!<>'.includes(c)) {
-      // Material inserted between or around columns: kept verbatim.
-      const g = group(spec, i + 1);
-      out += g ? c + spec.slice(i + 1, g.end) : c;
-      i = g ? g.end : i + 1;
-    } else if (c === '*') {
-      const count = group(spec, i + 1);
-      const body = count && group(spec, count.end);
-      if (!count || !body) {
-        return out + spec.slice(i);
-      }
-      out += `*{${count.value}}{${convertColumnSpec(body.value)}}`;
-      i = body.end;
-    } else if ('pmb'.includes(c)) {
-      const g = group(spec, i + 1);
-      out += 'l';
-      i = g ? g.end : i + 1;
-    } else if (c === 'X') {
-      out += 'l';
-      i++;
-    } else {
-      out += c;
-      i++;
+    const column = convertSpecifier(spec, i);
+    if (!column) {
+      return out + spec.slice(i);
     }
+    out += column.text;
+    i = column.end;
   }
   return out;
+}
+
+/** A converted column specifier: its MathJax text and the index after it. */
+interface Specifier {
+  text: string;
+  end: number;
+}
+
+/** Convert the specifier at `i`; undefined when it is malformed and the rest must be kept as is. */
+function convertSpecifier(spec: string, i: number): Specifier | undefined {
+  const c = spec[i];
+  if ('@!<>'.includes(c)) {
+    return insertedMaterial(spec, i);
+  }
+  if (c === '*') {
+    return repeatedColumns(spec, i);
+  }
+  if ('pmb'.includes(c)) {
+    return paragraphColumn(spec, i);
+  }
+  return { text: c === 'X' ? 'l' : c, end: i + 1 };
+}
+
+/** `@{}`, `!{}`, `>{}`, `<{}`: material inserted between or around columns, kept verbatim. */
+function insertedMaterial(spec: string, i: number): Specifier {
+  const g = group(spec, i + 1);
+  return g ? { text: spec.slice(i, g.end), end: g.end } : { text: spec[i], end: i + 1 };
+}
+
+/** `*{n}{cols}`: the repeated columns are converted too; undefined if a group is missing. */
+function repeatedColumns(spec: string, i: number): Specifier | undefined {
+  const count = group(spec, i + 1);
+  const body = count && group(spec, count.end);
+  if (!count || !body) {
+    return undefined;
+  }
+  return { text: `*{${count.value}}{${convertColumnSpec(body.value)}}`, end: body.end };
+}
+
+/** `p{}`, `m{}`, `b{}`: paragraph columns become `l`, their width is dropped. */
+function paragraphColumn(spec: string, i: number): Specifier {
+  const g = group(spec, i + 1);
+  return { text: 'l', end: g ? g.end : i + 1 };
 }
 
 /** Split `src` on a top-level separator: outside braces, not escaped. */
