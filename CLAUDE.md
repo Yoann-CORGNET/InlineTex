@@ -4,6 +4,8 @@ Extension VS Code de rendu WYSIWYG en ligne pour LaTeX.
 
 - Usage, réglages, commandes : [README.md](README.md)
 - Architecture et choix techniques : [docs/architecture.md](docs/architecture.md)
+- La documentation de référence est en anglais (`README.md`, `docs/architecture.md`), traduite dans
+  `README.fr.md` et `docs/architecture.fr.md` : toute modification se reporte dans les deux langues.
 
 ## Notes pour l'agent
 
