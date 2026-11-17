@@ -12,7 +12,10 @@ InlineTeX ne remplace pas l'éditeur. Il pose des **décorations** sur l'éditeu
 
 | Fichier | Rôle | Dépend de VS Code |
 | --- | --- | --- |
-| `src/parser/scan.ts` | Scanner LaTeX : formules, mise en forme, couleurs, liens, références, notes, images, symboles. Gère les commentaires, les échappements, les environnements verbatim et les arguments optionnels. Positions en offsets UTF-16. | non |
+| `src/parser/tokens.ts` | Types des jetons produits par les scanners. Positions en offsets UTF-16. | non |
+| `src/parser/syntax.ts` | Lecture bas niveau : commandes, commentaires, groupes `{…}` et arguments optionnels `[…]`, délimiteurs, `\verb`. Respecte les échappements et s'arrête à une ligne vide. | non |
+| `src/parser/scan.ts` | Scanner LaTeX : boucle principale, formules, environnements (listes, tableaux, verbatim), compteurs, `\item`. | non |
+| `src/parser/commands.ts` | Commandes en ligne : mise en forme, couleurs, liens, images, symboles, références, citations, étiquettes, notes. | non |
 | `src/parser/lists.ts` | Étiquettes des éléments de liste : puces et numéros par niveau, libellés enumitem et enumerate. | non |
 | `src/parser/table.ts` | Convertit un `tabular` en `array` MathJax : spécification de colonnes adaptée, filets hors des cellules, cellules dans `\text{…}`. | non |
 | `src/parser/markdown.ts` | Scanner Markdown : formules seulement, règles de Pandoc, code ignoré. | non |
@@ -20,12 +23,16 @@ InlineTeX ne remplace pas l'éditeur. Il pose des **décorations** sur l'éditeu
 | `src/parser/project.ts` | Commentaire `% !TEX root`, détection de `\documentclass`, liste des `\input`, `\include`, `\subfile` et `\usepackage`. | non |
 | `src/render/mathjax.ts` | MathJax 4 (`@mathjax/src`, adaptateur lite) : TeX → SVG autonome (`fontCache: 'none'`), couleur figée, dimensions en px ; `checkMath` compile sans mettre en page. | non |
 | `src/render/svg.ts` | Redimensionnement d'un SVG et data URI, séparés de MathJax pour rester légers. | non |
-| `src/render/image.ts` | Taille d'une image lue dans son en-tête (PNG, JPEG, GIF, SVG) et SVG d'encadrement. | non |
+| `src/render/image.ts` | Noms de fichier essayés pour un `\includegraphics`, taille d'une image lue dans son en-tête (PNG, JPEG, GIF, SVG) et SVG d'encadrement. | non |
 | `src/editor/layout.ts` | Calcule la taille d'image à partir de la police, de la hauteur de ligne et du nombre de lignes disponibles. | non |
 | `src/editor/plan.ts` | Choix des jetons à décorer dans une passe : plages visibles, règle de révélation, lignes vides disponibles. Tout en offsets entiers. | non |
 | `src/util/lru.ts` | Cache borné à éviction du moins récemment utilisé. | non |
 | `src/editor/project.ts` | Lecture asynchrone des autres fichiers du projet et fusion de leurs macros. | oui |
-| `src/editor/controller.ts` | Cycle de vie : cache d'analyse par version de document, caches de rendu, décorations, diagnostics, aperçu des images, survol (non vérifié visuellement), barre d'état, clé de contexte `inlineTeX.languageActive`. | oui |
+| `src/editor/settings.ts` | Lecture des réglages, couleur des formules selon le thème. | oui |
+| `src/editor/decorations.ts` | Types de décoration et construction des décorations d'une passe (masquage, images, symboles, mise en forme, couleurs). | oui |
+| `src/editor/images.ts` | Recherche et chargement asynchrone des images de `\includegraphics`, oubliées quand un fichier image change. | oui |
+| `src/editor/diagnostics.ts` | Erreurs TeX de chaque formule dans le panneau Problèmes, calculées par tranches. | oui |
+| `src/editor/controller.ts` | Cycle de vie : cache d'analyse par version de document, caches de rendu, passe de décoration, survol (non vérifié visuellement), barre d'état, clé de contexte `inlineTeX.languageActive`. | oui |
 | `src/extension.ts` | Activation et commandes. | oui |
 
 ## Points techniques

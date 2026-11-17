@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { scan, type MathToken } from '../src/parser/scan';
+import { scan } from '../src/parser/scan';
+import type { MathToken } from '../src/parser/tokens';
 import { convertColumnSpec, tabularToArray } from '../src/parser/table';
 
 describe('convertColumnSpec', () => {

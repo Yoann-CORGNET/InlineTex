@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { framedImageSvg, imageSize } from '../src/render/image';
+import { framedImageSvg, imageFileNames, imageSize } from '../src/render/image';
 
 function png(width: number, height: number): Uint8Array {
   const b = new Uint8Array(24);
@@ -31,5 +31,19 @@ describe('imageSize', () => {
     const svg = framedImageSvg('data:image/png;base64,AA==', 40, 20);
     expect(svg).toContain('width="40.00px" height="20.00px"');
     expect(svg).toContain('href="data:image/png;base64,AA=="');
+  });
+});
+
+describe('imageFileNames', () => {
+  it('keeps a displayable extension', () => {
+    expect(imageFileNames('fig/plot.PNG')).toEqual(['fig/plot.PNG']);
+  });
+
+  it('tries every displayable extension when there is none', () => {
+    expect(imageFileNames('fig.d/plot')).toEqual(['.png', '.jpg', '.jpeg', '.gif', '.svg'].map((e) => `fig.d/plot${e}`));
+  });
+
+  it('gives nothing for a format it cannot show', () => {
+    expect(imageFileNames('plot.pdf')).toEqual([]);
   });
 });

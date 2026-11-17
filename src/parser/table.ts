@@ -9,7 +9,7 @@
  * booktabs rules become `\hline`; `\multicolumn{n}` puts its text in the
  * first cell followed by n - 1 empty ones; `\multirow` keeps only its text.
  */
-import { matchBrace } from './scan';
+import { matchBrace, stripComments } from './syntax';
 
 /** Commands that draw a rule; they must stay outside `\text`, at the start of a row. */
 const RULES = /^\\(hline|toprule|midrule|bottomrule|cline\s*\{[^}]*\}|cmidrule\s*(?:\([^)]*\))?\s*\{[^}]*\}|addlinespace(?:\s*\[[^\]]*\])?)\s*/;
@@ -55,11 +55,6 @@ export function convertColumnSpec(spec: string): string {
     }
   }
   return out;
-}
-
-/** Remove `%` comments (an escaped `\%` is text). */
-function stripComments(src: string): string {
-  return src.replaceAll(/(^|[^\\])%.*$/gm, '$1');
 }
 
 /** Split `src` on a top-level separator: outside braces, not escaped. */

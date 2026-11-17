@@ -1,28 +1,21 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { scan, type FormatKind, type FormatToken, type ImageToken, type MathToken, type SymbolToken, type Token } from '../parser/scan';
-import { scanMarkdown } from '../parser/markdown';
 import { collectMacros, type MacroTable } from '../parser/macros';
+import { scanMarkdown } from '../parser/markdown';
+import { scan } from '../parser/scan';
+import type { ImageToken, MathToken, Token } from '../parser/tokens';
+import { framedImageSvg } from '../render/image';
 import type * as MathJax from '../render/mathjax';
 import type { RenderedMath } from '../render/mathjax';
 import { resizeSvg, svgToDataUri } from '../render/svg';
-import { IMAGE_EXTENSIONS, framedImageSvg, imageDataUri, imageSize, type ImageSize } from '../render/image';
 import { Lru } from '../util/lru';
+import { DecorationTypes, emptyDecorationSet, pushImage, pushText, tokenRange, type DecorationSet } from './decorations';
+import { MathDiagnostics } from './diagnostics';
+import { ImageLoader } from './images';
 import { exPx, layoutImage, resolveLineHeight, type EditorMetrics } from './layout';
-import { blankLinesAfter, lineAt, lineStarts, linesToOffsets, tokensToDecorate } from './plan';
-import { ProjectMacros } from './project';
-
-interface Settings {
-  enabled: boolean;
-  languages: string[];
-  renderMath: boolean;
-  renderTables: boolean;
-  renderFormatting: boolean;
-  renderImages: boolean;
-  revealOn: 'cursor' | 'line';
-  scale: number;
-  color: string;
-}
+import { displaySpan, lineStarts, linesToOffsets, tokensToDecorate } from './plan';
+import { NO_PROJECT, ProjectMacros } from './project';
+import { mathColor, readSettings } from './settings';
 
 interface ParsedDoc {
   version: number;
@@ -31,106 +24,70 @@ interface ParsedDoc {
   tokens: Token[];
   /** Macros of this document, merged over those of the rest of the project. */
   macros: MacroTable;
+  /** Short id of `macros`, used in cache keys instead of the table itself. */
   macroKey: string;
   ownMacros: MacroTable;
   /** Key of the project macros the merge was made with. */
   externalKey: string;
 }
 
+/** State of one decoration pass over an editor. */
+interface PassContext {
+  doc: vscode.TextDocument;
+  parsed: ParsedDoc;
+  metrics: EditorMetrics;
+  out: DecorationSet;
+}
+
 /** Lines kept decorated above and below the viewport, so scrolling does not flash source. */
 const VISIBLE_MARGIN = 30;
 /** Blank lines after display content that it may draw over. */
 const MAX_BLANK_LINES = 3;
-/**
- * Larger pictures are not previewed: the data URI (base64 inside an SVG, itself
- * in base64) is sent to the renderer on every pass, cursor moves included.
- */
-const MAX_IMAGE_BYTES = 1024 * 1024;
-
-const HIDE = 'none; display: none;';
-
-const FORMAT_STYLES: Record<Exclude<FormatKind, 'color'>, vscode.DecorationRenderOptions> = {
-  bold: { fontWeight: 'bold' },
-  italic: { fontStyle: 'italic' },
-  underline: { textDecoration: 'underline' },
-  monospace: { textDecoration: 'none; font-family: var(--vscode-editor-font-family), monospace;' },
-  link: { textDecoration: 'underline', color: new vscode.ThemeColor('textLink.foreground') },
-  part: heading('1.5em'),
-  chapter: heading('1.4em'),
-  section: heading('1.3em'),
-  subsection: heading('1.15em'),
-  subsubsection: heading('1.05em'),
-  paragraph: { fontWeight: 'bold' },
-  muted: { opacity: '0.45' },
-};
-
-const SYMBOL_STYLES: Record<SymbolToken['style'], vscode.ThemableDecorationAttachmentRenderOptions> = {
-  symbol: { color: new vscode.ThemeColor('textLink.foreground') },
-  ref: { color: new vscode.ThemeColor('textLink.foreground'), textDecoration: 'underline dotted' },
-  label: { color: new vscode.ThemeColor('descriptionForeground'), fontStyle: 'italic' },
-  note: { color: new vscode.ThemeColor('textLink.foreground') },
-};
-
-function heading(size: string): vscode.DecorationRenderOptions {
-  return {
-    fontWeight: 'bold',
-    color: new vscode.ThemeColor('textLink.foreground'),
-    textDecoration: `none; font-size: ${size};`,
-  };
-}
-
-/** A picture found for an \includegraphics path. */
-interface LoadedImage {
-  uri: vscode.Uri;
-  dataUri: string;
-  size: ImageSize;
-}
 
 type MathJaxModule = typeof MathJax;
 
-export class InlineTexController implements vscode.Disposable {
-  private readonly hideType = vscode.window.createTextEditorDecorationType({ textDecoration: HIDE });
-  private readonly imageType = vscode.window.createTextEditorDecorationType({});
-  private readonly symbolType = vscode.window.createTextEditorDecorationType({});
-  private readonly formatTypes = new Map<FormatKind, vscode.TextEditorDecorationType>(
-    (Object.keys(FORMAT_STYLES) as (keyof typeof FORMAT_STYLES)[]).map((k) => [
-      k,
-      vscode.window.createTextEditorDecorationType(FORMAT_STYLES[k]),
-    ]),
-  );
-  /** One decoration type per \textcolor color met so far. */
-  private readonly colorTypes = new Map<string, vscode.TextEditorDecorationType>();
+/** Ids of the macro tables met recently, so cache keys hold a short id rather than the whole table. */
+const macroIds = new Lru<string, string>(64);
+let nextMacroId = 0;
 
+function macroId(macros: MacroTable): string {
+  const json = JSON.stringify(macros);
+  let id = macroIds.get(json);
+  if (id === undefined) {
+    id = `m${nextMacroId++}`;
+    macroIds.set(json, id);
+  }
+  return id;
+}
+
+export class InlineTexController implements vscode.Disposable {
+  private readonly types = new DecorationTypes();
   private readonly parsed = new Map<string, ParsedDoc>();
   private readonly svgCache = new Lru<string, RenderedMath>(2000);
   private readonly uriCache = new Lru<string, vscode.Uri>(2000);
-  private readonly errorCache = new Lru<string, string | null>(5000);
-  private readonly images = new Map<string, Promise<LoadedImage | undefined>>();
-  private readonly loadedImages = new Map<string, LoadedImage | undefined>();
+  /** Framed pictures are large (up to a few MB each): kept apart from formulas, in a small cache. */
+  private readonly imageUriCache = new Lru<string, vscode.Uri>(32);
   /** Documents whose rendering was suspended from the status bar, for this session. */
   private readonly paused = new Set<string>();
-  private readonly diagnostics = vscode.languages.createDiagnosticCollection('InlineTeX');
-  private readonly diagnosticTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   private readonly project = new ProjectMacros((uri) => this.refreshDocument(uri));
+  private readonly images = new ImageLoader(
+    (uri) => this.redrawDocument(uri),
+    () => this.refreshAll(),
+  );
+  private readonly diagnostics = new MathDiagnostics({
+    applies: (doc) => this.applies(doc),
+    parse: (doc) => this.parse(doc),
+    rendersMath: (t) => this.rendersMath(t),
+    check: (tex, display, macros, macroKey) => this.mathjax().checkMath(tex, display, macros, macroKey),
+  });
   private readonly disposables: vscode.Disposable[] = [];
   private readonly timers = new Map<vscode.TextEditor, ReturnType<typeof setTimeout>>();
   private settings = readSettings();
   private mathjaxModule: MathJaxModule | undefined;
-  private imageTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** `fontDir` holds the MathJax glyph files built next to the bundle. */
   constructor(private readonly fontDir: string) {
-    const imageWatcher = vscode.workspace.createFileSystemWatcher(`**/*{${IMAGE_EXTENSIONS.join(',')}}`);
-    // Debounced: a script regenerating plots writes many files in a row.
-    const imagesChanged = () => {
-      clearTimeout(this.imageTimer);
-      this.imageTimer = setTimeout(() => {
-        this.images.clear();
-        this.loadedImages.clear();
-        this.refreshAll();
-      }, 300);
-    };
     this.disposables.push(
       vscode.window.onDidChangeVisibleTextEditors(() => this.refreshAll()),
       vscode.window.onDidChangeActiveTextEditor(() => this.updateContext()),
@@ -151,11 +108,8 @@ export class InlineTexController implements vscode.Disposable {
         }
       }),
       vscode.workspace.onDidCloseTextDocument((d) => {
-        const key = d.uri.toString();
-        this.parsed.delete(key);
-        this.diagnostics.delete(d.uri);
-        clearTimeout(this.diagnosticTimers.get(key));
-        this.diagnosticTimers.delete(key);
+        this.parsed.delete(d.uri.toString());
+        this.diagnostics.forget(d.uri);
       }),
       vscode.window.onDidChangeActiveColorTheme(() => this.refreshAll()),
       vscode.workspace.onDidChangeConfiguration((e) => {
@@ -165,10 +119,6 @@ export class InlineTexController implements vscode.Disposable {
         }
       }),
       vscode.languages.registerHoverProvider({ scheme: '*' }, { provideHover: (d, p) => this.hover(d, p) }),
-      imageWatcher,
-      imageWatcher.onDidChange(imagesChanged),
-      imageWatcher.onDidCreate(imagesChanged),
-      imageWatcher.onDidDelete(imagesChanged),
     );
     this.refreshAll();
   }
@@ -177,7 +127,7 @@ export class InlineTexController implements vscode.Disposable {
     this.updateContext();
     for (const ed of vscode.window.visibleTextEditors) {
       this.update(ed);
-      this.scheduleDiagnostics(ed.document);
+      this.diagnostics.schedule(ed.document);
     }
   }
 
@@ -199,7 +149,17 @@ export class InlineTexController implements vscode.Disposable {
     for (const ed of vscode.window.visibleTextEditors) {
       if (ed.document.uri.toString() === key) {
         this.update(ed);
-        this.scheduleDiagnostics(ed.document);
+        this.diagnostics.schedule(ed.document);
+      }
+    }
+  }
+
+  /** Redraw the document's editors soon, without overriding a pass already scheduled. */
+  private redrawDocument(uri: vscode.Uri): void {
+    const key = uri.toString();
+    for (const ed of vscode.window.visibleTextEditors) {
+      if (ed.document.uri.toString() === key && !this.timers.has(ed)) {
+        this.schedule(ed, 0);
       }
     }
   }
@@ -261,7 +221,7 @@ export class InlineTexController implements vscode.Disposable {
   private parse(doc: vscode.TextDocument): ParsedDoc {
     const key = doc.uri.toString();
     const markdown = doc.languageId === 'markdown';
-    const external = markdown ? { macros: {}, key: '{}' } : this.project.get(doc);
+    const external = markdown ? NO_PROJECT : this.project.get(doc);
     let parsed = this.parsed.get(key);
     if (parsed?.version === doc.version && parsed.externalKey === external.key) {
       return parsed;
@@ -280,10 +240,10 @@ export class InlineTexController implements vscode.Disposable {
       };
     }
     parsed.macros = { ...external.macros, ...parsed.ownMacros };
-    parsed.macroKey = JSON.stringify(parsed.macros);
+    parsed.macroKey = macroId(parsed.macros);
     parsed.externalKey = external.key;
     this.parsed.set(key, parsed);
-    this.scheduleDiagnostics(doc);
+    this.diagnostics.schedule(doc);
     return parsed;
   }
 
@@ -298,65 +258,33 @@ export class InlineTexController implements vscode.Disposable {
     };
   }
 
-  private mathColor(): string {
-    if (this.settings.color) {
-      return this.settings.color;
-    }
-    switch (vscode.window.activeColorTheme.kind) {
-      case vscode.ColorThemeKind.Light:
-        return '#1f1f1f';
-      case vscode.ColorThemeKind.HighContrastLight:
-        return '#000000';
-      case vscode.ColorThemeKind.HighContrast:
-        return '#ffffff';
-      default:
-        return '#d4d4d4';
-    }
-  }
-
   /** Formulas and tables share the MathJax pipeline but have their own setting. */
   private rendersMath(t: MathToken): boolean {
     return t.table ? this.settings.renderTables : this.settings.renderMath;
   }
 
   private renderKey(token: MathToken, m: EditorMetrics, parsed: ParsedDoc): string {
-    return `${token.display ? 'D' : 'I'}|${this.mathColor()}|${exPx(m)}|${parsed.macroKey}|${token.tex}`;
+    return `${token.display ? 'D' : 'I'}|${mathColor(this.settings)}|${exPx(m)}|${parsed.macroKey}|${token.tex}`;
   }
 
-  private render(token: MathToken, m: EditorMetrics, parsed: ParsedDoc): RenderedMath {
-    const key = this.renderKey(token, m, parsed);
+  private render(token: MathToken, m: EditorMetrics, parsed: ParsedDoc, key = this.renderKey(token, m, parsed)): RenderedMath {
     let r = this.svgCache.get(key);
     if (!r) {
-      const opts = { color: this.mathColor(), exPx: exPx(m), display: token.display };
+      const opts = { color: mathColor(this.settings), exPx: exPx(m), display: token.display };
       r = this.mathjax().renderMath(token.tex, opts, parsed.macros, parsed.macroKey);
       this.svgCache.set(key, r);
     }
     return r;
   }
 
-  private clear(editor: vscode.TextEditor): void {
-    for (const t of this.allTypes()) {
-      editor.setDecorations(t, []);
-    }
-  }
-
-  private allTypes(): vscode.TextEditorDecorationType[] {
-    return [this.hideType, this.imageType, this.symbolType, ...this.formatTypes.values(), ...this.colorTypes.values()];
-  }
-
   private update(editor: vscode.TextEditor): void {
     const doc = editor.document;
     if (!this.applies(doc)) {
-      this.clear(editor);
+      this.types.clear(editor);
       return;
     }
     const parsed = this.parse(doc);
-    const ctx: PassContext = {
-      doc,
-      parsed,
-      metrics: this.metrics(doc),
-      out: { hide: [], images: [], symbols: [], formats: new Map(), colors: new Map() },
-    };
+    const ctx: PassContext = { doc, parsed, metrics: this.metrics(doc), out: emptyDecorationSet() };
     const tokens = tokensToDecorate({
       tokens: parsed.tokens,
       lineStarts: parsed.lineStarts,
@@ -372,154 +300,41 @@ export class InlineTexController implements vscode.Disposable {
       } else if (t.type === 'image') {
         this.decorateImage(t, ctx);
       } else if (this.settings.renderFormatting) {
-        decorateText(t, ctx);
+        pushText(ctx.out, doc, t);
       }
     }
-    this.apply(editor, ctx.out);
-  }
-
-  private apply(editor: vscode.TextEditor, out: PassContext['out']): void {
-    editor.setDecorations(this.hideType, out.hide);
-    editor.setDecorations(this.imageType, out.images);
-    editor.setDecorations(this.symbolType, out.symbols);
-    for (const [kind, type] of this.formatTypes) {
-      editor.setDecorations(type, out.formats.get(kind) ?? []);
-    }
-    for (const color of out.colors.keys()) {
-      if (!this.colorTypes.has(color)) {
-        this.colorTypes.set(color, vscode.window.createTextEditorDecorationType({ color }));
-      }
-    }
-    for (const [color, type] of this.colorTypes) {
-      editor.setDecorations(type, out.colors.get(color) ?? []);
-    }
-  }
-
-  /** Lines a display element may cover: its own, plus the blank lines right after it. */
-  private displaySpan(t: Token, parsed: ParsedDoc, display: boolean): { span: number; start: number } {
-    const start = lineAt(parsed.lineStarts, t.start);
-    const end = lineAt(parsed.lineStarts, t.end);
-    let span = end - start + 1;
-    if (display) {
-      span += blankLinesAfter(parsed.text, parsed.lineStarts, end, MAX_BLANK_LINES);
-    }
-    return { span, start };
+    this.types.apply(editor, ctx.out);
   }
 
   private decorateMath(t: MathToken, ctx: PassContext): void {
     if (!this.rendersMath(t)) {
       return;
     }
-    const r = this.render(t, ctx.metrics, ctx.parsed);
+    const key = this.renderKey(t, ctx.metrics, ctx.parsed);
+    const r = this.render(t, ctx.metrics, ctx.parsed, key);
     if (r.error) {
       // Left as source: the Problems panel and the squiggle report it.
       return;
     }
-    const { span } = this.displaySpan(t, ctx.parsed, t.display);
-    const box = layoutImage(r, t.display, span, ctx.metrics);
-    const uriKey = `${this.renderKey(t, ctx.metrics, ctx.parsed)}|${box.widthPx.toFixed(2)}|${box.heightPx.toFixed(2)}`;
-    let uri = this.uriCache.get(uriKey);
-    if (!uri) {
-      uri = vscode.Uri.parse(svgToDataUri(resizeSvg(r.svg, box.widthPx, box.heightPx)));
-      this.uriCache.set(uriKey, uri);
-    }
-    pushImage(ctx, t, uri, box);
+    const box = layoutImage(r, t.display, span(t, ctx.parsed, t.display), ctx.metrics);
+    const uri = cachedUri(this.uriCache, key, box, () => resizeSvg(r.svg, box.widthPx, box.heightPx));
+    pushImage(ctx.out, ctx.doc, t, uri, box);
   }
 
   private decorateImage(t: ImageToken, ctx: PassContext): void {
     if (!this.settings.renderImages) {
       return;
     }
-    const image = this.image(ctx.doc, t.path);
+    const image = this.images.get(ctx.doc, this.project.get(ctx.doc).root, t.path);
     if (!image) {
       return;
     }
-    const { span } = this.displaySpan(t, ctx.parsed, true);
-    const box = layoutImage({ widthPx: image.size.width, heightPx: image.size.height, depthPx: 0 }, true, span, ctx.metrics);
-    const key = `img|${image.uri.toString()}|${box.widthPx.toFixed(2)}|${box.heightPx.toFixed(2)}`;
-    let uri = this.uriCache.get(key);
-    if (!uri) {
-      uri = vscode.Uri.parse(svgToDataUri(framedImageSvg(image.dataUri, box.widthPx, box.heightPx)));
-      this.uriCache.set(key, uri);
-    }
-    pushImage(ctx, t, uri, box);
-  }
-
-  /** The picture for an \includegraphics path, or undefined while it loads or if there is none. */
-  private image(doc: vscode.TextDocument, ref: string): LoadedImage | undefined {
-    const root = this.project.get(doc).root;
-    const bases = [vscode.Uri.joinPath(doc.uri, '..')];
-    if (root) {
-      bases.unshift(vscode.Uri.joinPath(root, '..'));
-    }
-    const key = `${bases.map((b) => b.toString()).join('|')}|${ref}`;
-    if (this.loadedImages.has(key)) {
-      return this.loadedImages.get(key);
-    }
-    if (!this.images.has(key)) {
-      const loading = findImage(bases, ref);
-      this.images.set(key, loading);
-      void loading.then((img) => {
-        if (this.images.get(key) === loading) {
-          this.loadedImages.set(key, img);
-          if (img) {
-            this.refreshDocument(doc.uri);
-          }
-        }
-      });
-    }
-    return undefined;
-  }
-
-  private scheduleDiagnostics(doc: vscode.TextDocument): void {
-    const key = doc.uri.toString();
-    clearTimeout(this.diagnosticTimers.get(key));
-    this.diagnosticTimers.set(
-      key,
-      setTimeout(() => {
-        this.diagnosticTimers.delete(key);
-        void this.computeDiagnostics(doc);
-      }, 300),
+    const size = { widthPx: image.size.width, heightPx: image.size.height, depthPx: 0 };
+    const box = layoutImage(size, true, span(t, ctx.parsed, true), ctx.metrics);
+    const uri = cachedUri(this.imageUriCache, image.uri.toString(), box, () =>
+      framedImageSvg(image.dataUri, box.widthPx, box.heightPx),
     );
-  }
-
-  /**
-   * Report TeX errors of every formula in the Problems panel, including the
-   * one being edited. Runs in slices so a long document does not freeze the
-   * editor, and stops if the document changes meanwhile.
-   */
-  private async computeDiagnostics(doc: vscode.TextDocument): Promise<void> {
-    if (doc.isClosed || !this.applies(doc)) {
-      this.diagnostics.delete(doc.uri);
-      return;
-    }
-    const parsed = this.parse(doc);
-    const version = doc.version;
-    const found: vscode.Diagnostic[] = [];
-    const math = parsed.tokens.filter((t): t is MathToken => t.type === 'math' && this.rendersMath(t));
-    for (let i = 0; i < math.length; i++) {
-      if (i % 100 === 99) {
-        await new Promise((resolve) => setImmediate(resolve));
-        if (doc.isClosed || doc.version !== version) {
-          return;
-        }
-      }
-      const t = math[i];
-      const key = `${t.display ? 'D' : 'I'}|${parsed.macroKey}|${t.tex}`;
-      let error = this.errorCache.get(key);
-      if (error === undefined) {
-        error = this.mathjax().checkMath(t.tex, t.display, parsed.macros, parsed.macroKey) ?? null;
-        this.errorCache.set(key, error);
-      }
-      if (error !== null) {
-        const range = new vscode.Range(doc.positionAt(t.start), doc.positionAt(t.end));
-        const message = t.table ? `Tableau : ${error}` : error;
-        const d = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
-        d.source = 'InlineTeX';
-        found.push(d);
-      }
-    }
-    this.diagnostics.set(doc.uri, found);
+    pushImage(ctx.out, ctx.doc, t, uri, box);
   }
 
   private hover(doc: vscode.TextDocument, pos: vscode.Position): vscode.Hover | undefined {
@@ -534,7 +349,7 @@ export class InlineTexController implements vscode.Disposable {
       return undefined;
     }
     const md = this.hoverContent(t, doc, parsed);
-    return md && new vscode.Hover(md, new vscode.Range(doc.positionAt(t.start), doc.positionAt(t.end)));
+    return md && new vscode.Hover(md, tokenRange(doc, t));
   }
 
   private hoverContent(t: Token, doc: vscode.TextDocument, parsed: ParsedDoc): vscode.MarkdownString | undefined {
@@ -547,7 +362,7 @@ export class InlineTexController implements vscode.Disposable {
       }
       md.appendMarkdown(`![formule](${svgToDataUri(r.svg)})`);
     } else if (t.type === 'image' && this.settings.renderImages) {
-      const image = this.image(doc, t.path);
+      const image = this.images.get(doc, this.project.get(doc).root, t.path);
       if (!image) {
         return undefined;
       }
@@ -563,137 +378,32 @@ export class InlineTexController implements vscode.Disposable {
   }
 
   dispose(): void {
-    clearTimeout(this.imageTimer);
-    for (const timer of [...this.timers.values(), ...this.diagnosticTimers.values()]) {
+    for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
-    for (const t of this.allTypes()) {
-      t.dispose();
-    }
-    for (const d of [...this.disposables, this.diagnostics, this.status, this.project]) {
+    for (const d of [...this.disposables, this.types, this.images, this.diagnostics, this.status, this.project]) {
       d.dispose();
     }
   }
 }
 
-interface PassContext {
-  doc: vscode.TextDocument;
-  parsed: ParsedDoc;
-  metrics: EditorMetrics;
-  out: {
-    hide: vscode.Range[];
-    images: vscode.DecorationOptions[];
-    symbols: vscode.DecorationOptions[];
-    formats: Map<FormatKind, vscode.Range[]>;
-    colors: Map<string, vscode.Range[]>;
-  };
+/** Lines the token may cover; display content also takes the blank lines after it. */
+function span(t: Token, parsed: ParsedDoc, display: boolean): number {
+  return displaySpan(parsed.text, parsed.lineStarts, t.start, t.end, display ? MAX_BLANK_LINES : 0);
 }
 
-function tokenRange(doc: vscode.TextDocument, t: Token): vscode.Range {
-  return new vscode.Range(doc.positionAt(t.start), doc.positionAt(t.end));
-}
-
-/** Hide the token's source and draw `uri` (an SVG of the given box) in its place. */
-function pushImage(
-  ctx: PassContext,
-  t: Token,
-  uri: vscode.Uri,
-  box: { widthPx: number; heightPx: number; verticalAlign: string },
-): void {
-  const range = tokenRange(ctx.doc, t);
-  ctx.out.hide.push(range);
-  ctx.out.images.push({
-    range: new vscode.Range(range.start, range.start),
-    renderOptions: {
-      before: {
-        contentIconPath: uri,
-        width: `${box.widthPx.toFixed(2)}px`,
-        height: `${box.heightPx.toFixed(2)}px`,
-        textDecoration: `none; vertical-align: ${box.verticalAlign};`,
-      },
-    },
-  });
-}
-
-/** Formatting commands and symbols: hide the markup, style or replace what remains. */
-function decorateText(t: FormatToken | SymbolToken, ctx: PassContext): void {
-  const { doc, out } = ctx;
-  const range = tokenRange(doc, t);
-  if (t.type === 'symbol') {
-    out.hide.push(range);
-    out.symbols.push({
-      range: new vscode.Range(range.start, range.start),
-      renderOptions: { before: { contentText: t.text, ...SYMBOL_STYLES[t.style] } },
-    });
-    return;
+/** Data URI of the SVG `build` makes at the size of `box`, cached under `key` and that size. */
+function cachedUri(
+  cache: Lru<string, vscode.Uri>,
+  key: string,
+  box: { widthPx: number; heightPx: number },
+  build: () => string,
+): vscode.Uri {
+  const sized = `${key}|${box.widthPx.toFixed(2)}|${box.heightPx.toFixed(2)}`;
+  let uri = cache.get(sized);
+  if (!uri) {
+    uri = vscode.Uri.parse(svgToDataUri(build()));
+    cache.set(sized, uri);
   }
-  const argStart = doc.positionAt(t.argStart);
-  const argEnd = doc.positionAt(t.argEnd);
-  // Muted spans hide nothing: their markup ranges are empty.
-  for (const hidden of [new vscode.Range(range.start, argStart), new vscode.Range(argEnd, range.end)]) {
-    if (!hidden.isEmpty) {
-      out.hide.push(hidden);
-    }
-  }
-  const arg = new vscode.Range(argStart, argEnd);
-  if (t.kind === 'color' && t.color) {
-    const list = out.colors.get(t.color) ?? [];
-    list.push(arg);
-    out.colors.set(t.color, list);
-    return;
-  }
-  const list = out.formats.get(t.kind) ?? [];
-  list.push(arg);
-  out.formats.set(t.kind, list);
-}
-
-/**
- * Locate an \includegraphics file like LaTeX: relative to the root document,
- * then to the current one, trying the displayable extensions when none is given.
- */
-async function findImage(bases: vscode.Uri[], ref: string): Promise<LoadedImage | undefined> {
-  const ext = path.posix.extname(ref).toLowerCase();
-  if (ext && !IMAGE_EXTENSIONS.includes(ext)) {
-    return undefined;
-  }
-  const names = ext ? [ref] : IMAGE_EXTENSIONS.map((e) => ref + e);
-  for (const base of bases) {
-    for (const name of names) {
-      const uri = vscode.Uri.joinPath(base, name);
-      const image = await loadImage(uri, path.posix.extname(name).toLowerCase());
-      if (image) {
-        return image;
-      }
-    }
-  }
-  return undefined;
-}
-
-async function loadImage(uri: vscode.Uri, ext: string): Promise<LoadedImage | undefined> {
-  try {
-    const stat = await vscode.workspace.fs.stat(uri);
-    if (stat.size > MAX_IMAGE_BYTES) {
-      return undefined;
-    }
-    const bytes = await vscode.workspace.fs.readFile(uri);
-    const size = imageSize(bytes, ext);
-    return size ? { uri, dataUri: imageDataUri(bytes, ext), size } : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function readSettings(): Settings {
-  const c = vscode.workspace.getConfiguration('inlineTeX');
-  return {
-    enabled: c.get('enabled', true),
-    languages: c.get('languages', ['latex', 'tex']),
-    renderMath: c.get('renderMath', true),
-    renderTables: c.get('renderTables', true),
-    renderFormatting: c.get('renderFormatting', true),
-    renderImages: c.get('renderImages', true),
-    revealOn: c.get('revealOn', 'cursor'),
-    scale: c.get('scale', 1),
-    color: c.get('color', ''),
-  };
+  return uri;
 }

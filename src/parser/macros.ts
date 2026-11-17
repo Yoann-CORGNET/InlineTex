@@ -1,4 +1,4 @@
-import { matchBrace } from './scan';
+import { matchBrace } from './syntax';
 
 export type MacroTable = Record<string, string | [string, number]>;
 

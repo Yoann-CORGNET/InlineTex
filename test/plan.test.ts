@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blankLinesAfter, isRevealed, lineAt, lineStarts, linesToOffsets, tokensToDecorate } from '../src/editor/plan';
+import { blankLinesAfter, displaySpan, isRevealed, lineAt, lineStarts, linesToOffsets, tokensToDecorate } from '../src/editor/plan';
 import { scan } from '../src/parser/scan';
 import { Lru } from '../src/util/lru';
 
@@ -71,5 +71,21 @@ describe('Lru', () => {
     lru.get('a');
     lru.set('c', 3);
     expect([lru.get('a'), lru.get('b'), lru.get('c')]).toEqual([1, undefined, 3]);
+  });
+});
+
+describe('displaySpan', () => {
+  const src = 'a\n$$x\ny$$\n\n\nb';
+  const starts = lineStarts(src);
+  const start = src.indexOf('$$');
+  const end = src.lastIndexOf('$$') + 2;
+
+  it('counts the lines of the token', () => {
+    expect(displaySpan(src, starts, start, end, 0)).toBe(2);
+  });
+
+  it('adds the blank lines after it, up to the bound', () => {
+    expect(displaySpan(src, starts, start, end, 3)).toBe(4);
+    expect(displaySpan(src, starts, start, end, 1)).toBe(3);
   });
 });

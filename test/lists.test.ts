@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { enumeratePackageLabel, enumitemLabel, itemLabel, parseListOptions } from '../src/parser/lists';
-import { scan, type FormatToken, type SymbolToken } from '../src/parser/scan';
+import { scan } from '../src/parser/scan';
+import type { FormatToken, SymbolToken } from '../src/parser/tokens';
 
 /** Labels drawn for each \item, in order. */
 const labels = (src: string) =>

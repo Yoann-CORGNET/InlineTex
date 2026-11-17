@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { cssColor, matchBrace, scan, type FormatToken, type MathToken, type SymbolToken } from '../src/parser/scan';
+import { cssColor } from '../src/parser/commands';
+import { scan } from '../src/parser/scan';
+import { matchBrace } from '../src/parser/syntax';
+import type { FormatToken, MathToken, SymbolToken } from '../src/parser/tokens';
 import { collectMacros } from '../src/parser/macros';
 
 const math = (src: string) => scan(src).filter((t): t is MathToken => t.type === 'math');

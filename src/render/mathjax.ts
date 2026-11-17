@@ -34,6 +34,7 @@ import '@mathjax/src/js/input/tex/units/UnitsConfiguration.js';
 import '@mathjax/src/js/input/tex/upgreek/UpgreekConfiguration.js';
 import '@mathjax/src/js/input/tex/verb/VerbConfiguration.js';
 import type { MacroTable } from '../parser/macros';
+import { Lru } from '../util/lru';
 
 /** Packages registered by the imports above, in the order MathJax applies them. */
 const PACKAGES = [
@@ -79,8 +80,7 @@ const adaptor = liteAdaptor();
 RegisterHTMLHandler(adaptor);
 
 /** One MathJax document per macro set, so that split editors do not rebuild it on every render. */
-const documents = new Map<string, MathDocument>();
-const MAX_DOCUMENTS = 4;
+const documents = new Lru<string, MathDocument>(4);
 
 /**
  * One font instance shared by every document. With synchronous loading, a
@@ -104,15 +104,10 @@ function createDocument(macros: MacroTable) {
 
 function documentFor(macros: MacroTable, key: string): MathDocument {
   let doc = documents.get(key);
-  if (doc) {
-    documents.delete(key);
-  } else {
+  if (!doc) {
     doc = createDocument(macros);
-    if (documents.size >= MAX_DOCUMENTS) {
-      documents.delete(documents.keys().next().value as string);
-    }
+    documents.set(key, doc);
   }
-  documents.set(key, doc);
   return doc;
 }
 

@@ -2,7 +2,7 @@
  * Which tokens get decorated in a pass, computed on plain offsets: no VS Code
  * dependency, so the reveal and visibility rules are unit-testable.
  */
-import type { Token } from '../parser/scan';
+import type { Token } from '../parser/tokens';
 
 /** Half-open offset range [start, end). Touching ranges count as overlapping. */
 export interface OffsetRange {
@@ -91,6 +91,16 @@ export function tokensToDecorate(input: PlanInput): Token[] {
 }
 
 /** Number of blank lines right after `line` (at most `max`): display content may draw over them. */
+/**
+ * Lines a token from `start` to `end` covers: its own, plus up to
+ * `maxBlank` blank lines right after it that display content may draw over.
+ */
+export function displaySpan(src: string, starts: readonly number[], start: number, end: number, maxBlank: number): number {
+  const first = lineAt(starts, start);
+  const last = lineAt(starts, end);
+  return last - first + 1 + blankLinesAfter(src, starts, last, maxBlank);
+}
+
 export function blankLinesAfter(src: string, starts: readonly number[], line: number, max: number): number {
   let n = 0;
   while (n < max && line + n + 1 < starts.length) {

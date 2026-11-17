@@ -5,11 +5,21 @@ import { findIncludes, hasDocumentClass, includeFileName, magicRoot } from '../p
 /** Bound on files read for one project, against include cycles and huge trees. */
 const MAX_FILES = 64;
 
+/** Delay that merges the save event and the watcher event of one save. */
+const INVALIDATE_DELAY_MS = 300;
+
 interface Resolved {
   macros: MacroTable;
   key: string;
   /** Root document of the project, when one was found. */
   root?: vscode.Uri;
+}
+
+/** Result for a document whose project brings no macros. */
+export const NO_PROJECT: Resolved = { macros: {}, key: '{}' };
+
+function openDocument(key: string): vscode.TextDocument | undefined {
+  return vscode.workspace.textDocuments.find((d) => d.uri.toString() === key);
 }
 
 /**
@@ -24,18 +34,20 @@ export class ProjectMacros implements vscode.Disposable {
   private readonly resolved = new Map<string, Resolved>();
   private readonly running = new Set<string>();
   private readonly disposables: vscode.Disposable[] = [];
+  private invalidateTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly onChange: (uri: vscode.Uri) => void) {
     const watcher = vscode.workspace.createFileSystemWatcher('**/*.{tex,sty}');
-    const invalidate = () => this.invalidate();
+    const invalidate = () => this.scheduleInvalidate();
     this.disposables.push(
       watcher,
       watcher.onDidChange(invalidate),
       watcher.onDidCreate(invalidate),
       watcher.onDidDelete(invalidate),
+      // The watcher misses files outside the workspace.
       vscode.workspace.onDidSaveTextDocument((d) => {
-        if (d.languageId !== 'markdown') {
-          this.invalidate();
+        if (/\.(tex|sty)$/i.test(d.uri.path)) {
+          invalidate();
         }
       }),
     );
@@ -45,42 +57,45 @@ export class ProjectMacros implements vscode.Disposable {
   get(doc: vscode.TextDocument): Resolved {
     const key = doc.uri.toString();
     const known = this.resolved.get(key);
-    if (!known && !this.running.has(key)) {
-      this.running.add(key);
-      void this.resolve(doc).then(
-        (r) => this.store(doc.uri, r),
-        () => this.store(doc.uri, { macros: {}, key: '{}' }),
-      );
+    if (!known) {
+      this.start(doc, () => this.store(doc.uri, NO_PROJECT));
     }
-    return known ?? { macros: {}, key: '{}' };
+    return known ?? NO_PROJECT;
+  }
+
+  private start(doc: vscode.TextDocument, onError: () => void): void {
+    const key = doc.uri.toString();
+    if (this.running.has(key)) {
+      return;
+    }
+    this.running.add(key);
+    void this.resolve(doc).then((r) => this.store(doc.uri, r), onError);
   }
 
   private store(uri: vscode.Uri, r: Resolved): void {
     const key = uri.toString();
     this.running.delete(key);
-    const before = this.resolved.get(key)?.key ?? '{}';
+    const before = this.resolved.get(key)?.key ?? NO_PROJECT.key;
     this.resolved.set(key, r);
     if (r.key !== before) {
       this.onChange(uri);
     }
   }
 
+  private scheduleInvalidate(): void {
+    clearTimeout(this.invalidateTimer);
+    this.invalidateTimer = setTimeout(() => this.invalidate(), INVALIDATE_DELAY_MS);
+  }
+
   private invalidate(): void {
     this.texts.clear();
     // Keep the previous result until the new one lands, so nothing flickers.
-    const docs = [...this.resolved.keys()];
-    for (const key of docs) {
-      const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === key);
-      if (!doc) {
+    for (const key of [...this.resolved.keys()]) {
+      const doc = openDocument(key);
+      if (doc) {
+        this.start(doc, () => this.running.delete(key));
+      } else {
         this.resolved.delete(key);
-        continue;
-      }
-      if (!this.running.has(key)) {
-        this.running.add(key);
-        void this.resolve(doc).then(
-          (r) => this.store(doc.uri, r),
-          () => this.running.delete(key),
-        );
       }
     }
   }
@@ -187,7 +202,7 @@ export class ProjectMacros implements vscode.Disposable {
   /** Text of `uri`: the open document if any (unsaved edits included), else the file. */
   private read(uri: vscode.Uri): Promise<string | undefined> {
     const key = uri.toString();
-    const open = vscode.workspace.textDocuments.find((d) => d.uri.toString() === key);
+    const open = openDocument(key);
     if (open) {
       return Promise.resolve(open.getText());
     }
@@ -203,6 +218,7 @@ export class ProjectMacros implements vscode.Disposable {
   }
 
   dispose(): void {
+    clearTimeout(this.invalidateTimer);
     for (const d of this.disposables) {
       d.dispose();
     }

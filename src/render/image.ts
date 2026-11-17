@@ -15,6 +15,20 @@ const MIME: Record<string, string> = {
   '.svg': 'image/svg+xml',
 };
 
+/**
+ * File names LaTeX would try for an \includegraphics path: the path itself if
+ * it has a displayable extension, each displayable extension if it has none,
+ * nothing otherwise (a PDF, say).
+ */
+export function imageFileNames(ref: string): string[] {
+  const dot = ref.lastIndexOf('.');
+  const ext = dot > ref.lastIndexOf('/') ? ref.slice(dot).toLowerCase() : '';
+  if (!ext) {
+    return IMAGE_EXTENSIONS.map((e) => ref + e);
+  }
+  return IMAGE_EXTENSIONS.includes(ext) ? [ref] : [];
+}
+
 export interface ImageSize {
   width: number;
   height: number;

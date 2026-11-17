@@ -3,16 +3,13 @@
  * \documentclass detection and the files a document pulls in.
  */
 
+import { stripComments } from './syntax';
+
 export interface Include {
   /** `tex` for \input / \include / \subfile, `sty` for \usepackage / \RequirePackage. */
   kind: 'tex' | 'sty';
   /** Name as written, without the extension LaTeX would add. */
   name: string;
-}
-
-/** Source with comments removed (an unescaped `%` runs to the end of the line). */
-function stripComments(src: string): string {
-  return src.replaceAll(/(^|[^\\])%.*$/gm, '$1');
 }
 
 /** Path given by a `% !TEX root = path` magic comment in the first lines, if any. */

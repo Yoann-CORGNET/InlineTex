@@ -5,7 +5,8 @@
  * not followed by a digit (so "$5 and $10" stays text). Code fences and code
  * spans are skipped, `\` escapes the next character, and `%` is plain text.
  */
-import type { MathToken } from './scan';
+import { blankLineAt } from './syntax';
+import type { MathToken } from './tokens';
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 
@@ -50,10 +51,6 @@ function skipCodeSpan(src: string, i: number): number {
     at = src.indexOf(run, skip);
   }
   return at === -1 ? i + n : at + n;
-}
-
-function blankLineAt(src: string, i: number): boolean {
-  return src[i] === '\n' && /^\n[ \t\r]*\n/.test(src.slice(i, i + 64));
 }
 
 function isSpace(c: string | undefined): boolean {
