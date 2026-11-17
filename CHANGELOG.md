@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.2](https://github.com/Yoann-CORGNET/InlineTex/compare/v0.3.1...v0.3.2) (2026-11-17)
+
+
+### Corrections
+
+* regex sans retour arrière quadratique et commentaires après \\ reconnus ([22f84ca](https://github.com/Yoann-CORGNET/InlineTex/commit/22f84ca20af027a71eb6d18abdc2ace8350f0d9f))
+* regex sans retour arrière quadratique et commentaires après \\ reconnus ([327fbfd](https://github.com/Yoann-CORGNET/InlineTex/commit/327fbfd9e6376db1f25faa8c1b807145c4988983))
+* String.raw pour la commande \hline des règles de tableau ([4219172](https://github.com/Yoann-CORGNET/InlineTex/commit/421917284c5a03b7da67c750d01805f2bf0182bf))
+
 ## [0.3.1](https://github.com/Yoann-CORGNET/InlineTex/compare/v0.3.0...v0.3.1) (2026-11-17)
 
 
