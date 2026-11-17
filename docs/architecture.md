@@ -21,7 +21,7 @@ InlineTeX does not replace the editor. It places **decorations** on the native t
 | `src/parser/lists.ts` | List item labels: bullets and numbers by level, enumitem and enumerate labels. | no |
 | `src/parser/table.ts` | Converts a `tabular` into a MathJax `array`: adapted column specification, rules outside cells, cells inside `\text{…}`. | no |
 | `src/parser/markdown.ts` | Markdown scanner: formulas only, Pandoc rules, code ignored. | no |
-| `src/parser/macros.ts` | Extracts `\newcommand`, `\def` and `\DeclareMathOperator` for MathJax. | no |
+| `src/parser/macros.ts` | Extracts `\newcommand`, `\def` and `\DeclareMathOperator` for MathJax, and those the text scanner can follow (renames, plain texts). | no |
 | `src/parser/project.ts` | `% !TEX root` comment, `\documentclass` detection, list of `\input`, `\include`, `\subfile` and `\usepackage`. | no |
 | `src/render/mathjax.ts` | MathJax 4 (`@mathjax/src`, lite adaptor): TeX → standalone SVG (`fontCache: 'none'`), fixed color, dimensions in px; `checkMath` compiles without layout. | no |
 | `src/render/svg.ts` | SVG resizing and data URI, kept apart from MathJax to stay lightweight. | no |
@@ -81,6 +81,9 @@ InlineTeX does not replace the editor. It places **decorations** on the native t
   files at most) and returns the macros found. The file being edited is tracked but not
   collected: its macros are read live and take precedence. Saving or changing a `.tex` or `.sty`
   file on disk restarts the lookup.
+- **Macros in text.** The scanner does not expand macros: `textMacros` keeps only those it can read
+  as a known command or as a fixed text, and `scan` receives them. The text therefore depends on
+  the project macros, and is scanned again when they arrive.
 
 ## Verification
 

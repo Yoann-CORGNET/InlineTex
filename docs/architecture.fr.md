@@ -21,7 +21,7 @@ InlineTeX ne remplace pas l'éditeur. Il pose des **décorations** sur l'éditeu
 | `src/parser/lists.ts` | Étiquettes des éléments de liste : puces et numéros par niveau, libellés enumitem et enumerate. | non |
 | `src/parser/table.ts` | Convertit un `tabular` en `array` MathJax : spécification de colonnes adaptée, filets hors des cellules, cellules dans `\text{…}`. | non |
 | `src/parser/markdown.ts` | Scanner Markdown : formules seulement, règles de Pandoc, code ignoré. | non |
-| `src/parser/macros.ts` | Extrait `\newcommand`, `\def` et `\DeclareMathOperator` pour MathJax. | non |
+| `src/parser/macros.ts` | Extrait `\newcommand`, `\def` et `\DeclareMathOperator` pour MathJax, et celles que le scanner de texte sait suivre (renommages, textes simples). | non |
 | `src/parser/project.ts` | Commentaire `% !TEX root`, détection de `\documentclass`, liste des `\input`, `\include`, `\subfile` et `\usepackage`. | non |
 | `src/render/mathjax.ts` | MathJax 4 (`@mathjax/src`, adaptateur lite) : TeX → SVG autonome (`fontCache: 'none'`), couleur figée, dimensions en px ; `checkMath` compile sans mettre en page. | non |
 | `src/render/svg.ts` | Redimensionnement d'un SVG et data URI, séparés de MathJax pour rester légers. | non |
@@ -85,6 +85,9 @@ InlineTeX ne remplace pas l'éditeur. Il pose des **décorations** sur l'éditeu
   l'ordre (64 fichiers au plus) et rend les macros trouvées. Le fichier en cours d'édition est
   suivi mais pas collecté : ses macros sont lues en direct et l'emportent. Un enregistrement ou une
   modification sur disque d'un `.tex` ou d'un `.sty` relance la recherche.
+- **Macros dans le texte.** Le scanner ne développe pas les macros : `textMacros` ne garde que
+  celles qu'il sait lire comme une commande connue ou comme un texte fixe, et `scan` les reçoit. Le
+  texte dépend donc des macros du projet, et il est scanné à nouveau quand elles arrivent.
 
 ## Vérification
 

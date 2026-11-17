@@ -35,6 +35,12 @@ passed to MathJax. They are read from the current file and from the rest of the 
 - files included by `\input`, `\include` and `\subfile`, and local `.sty` files loaded by
   `\usepackage`.
 
+In the text, outside formulas, two kinds of macros are also followed: a rename of a command
+(`\newcommand{\code}[1]{\texttt{#1}}` is shown like `\texttt`) and a macro without argument whose
+body is plain text, possibly inside one text command (`\newcommand{\SAT}{\textsc{sat}}` is shown as
+"sat", without the small caps). Other text macros, such as one nesting several commands, stay as
+source.
+
 `%` comments, escaped `\$`, the `verbatim`, `lstlisting`, `minted` and `comment` environments,
 and `\verb` are ignored. An invalid formula stays as source; its error shows up in the Problems
 panel, including while you fix it.
