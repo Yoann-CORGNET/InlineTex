@@ -2,9 +2,22 @@
   "name": "inlinetex",
   "displayName": "InlineTeX",
   "description": "Édition WYSIWYG en ligne pour LaTeX : formules rendues et mise en forme directement dans l'éditeur, source révélé sous le curseur.",
-  "version": "0.1.0",
-  "publisher": "inlinetex",
+  "version": "0.2.0",
+  "publisher": "yoann-corgnet",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yoann-CORGNET/InlineTex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Yoann-CORGNET/InlineTex/issues"
+  },
+  "homepage": "https://github.com/Yoann-CORGNET/InlineTex#readme",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1b2640",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -119,7 +132,7 @@
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "package": "vsce package --no-dependencies --no-rewrite-relative-links",
+    "package": "vsce package --no-dependencies",
     "vscode:prepublish": "node esbuild.mjs --production",
     "lint": "biome lint",
     "test:integration": "node esbuild.mjs --production && node test/integration/run.mjs"

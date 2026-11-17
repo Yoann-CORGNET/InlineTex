@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié
+## 0.2.0
 
 ### Ajouts
 

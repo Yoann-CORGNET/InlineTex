@@ -120,7 +120,7 @@ Electron, par exemple `/usr/share/code/code`, pas le script `code`). Sans écran
 Pour essayer l'extension, ouvrez le dossier dans VS Code et lancez « Lancer l'extension » (F5) :
 une fenêtre de développement s'ouvre sur `samples/demo.tex`, qui inclut `samples/chapitre.tex`
 et charge `samples/demomacros.sty`. `samples/demo.md` sert à vérifier le mode Markdown. Pour installer le paquet :
-`code --install-extension inlinetex-0.1.0.vsix`.
+`code --install-extension inlinetex-0.2.0.vsix`.
 
 L'architecture est décrite dans [docs/architecture.md](docs/architecture.md).
 
