@@ -11,6 +11,31 @@ describe('convertColumnSpec', () => {
     expect(convertColumnSpec('*{3}{p{1cm}|}')).toBe('*{3}{l|}');
     expect(convertColumnSpec('>{\\bfseries}p{2cm}')).toBe('>{\\bfseries}l');
   });
+
+  it('keeps inter-column material verbatim, with or without a group', () => {
+    expect(convertColumnSpec(String.raw`l!{\vrule}r<{\,}c`)).toBe(String.raw`l!{\vrule}r<{\,}c`);
+    expect(convertColumnSpec('l@{a{b}c}r')).toBe('l@{a{b}c}r');
+    expect(convertColumnSpec('l@r')).toBe('l@r');
+    expect(convertColumnSpec('l>{')).toBe('l>{');
+  });
+
+  it('maps paragraph columns without a width group to l', () => {
+    expect(convertColumnSpec('pc')).toBe('lc');
+    expect(convertColumnSpec('m{')).toBe('l{');
+    expect(convertColumnSpec('XXc')).toBe('llc');
+  });
+
+  it('converts repeated columns recursively and keeps malformed ones as is', () => {
+    expect(convertColumnSpec('*{2}{*{3}{X}|}')).toBe('*{2}{*{3}{l}|}');
+    expect(convertColumnSpec('c*{2}p{1cm}')).toBe('c*{2}p{1cm}');
+    expect(convertColumnSpec('l*3c')).toBe('l*3c');
+    expect(convertColumnSpec('l*{2}')).toBe('l*{2}');
+  });
+
+  it('passes through unknown specifiers and the empty spec', () => {
+    expect(convertColumnSpec('')).toBe('');
+    expect(convertColumnSpec('S[2.1]c')).toBe('S[2.1]c');
+  });
 });
 
 describe('tabularToArray', () => {
