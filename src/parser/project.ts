@@ -15,8 +15,8 @@ export interface Include {
 /** Path given by a `% !TEX root = path` magic comment in the first lines, if any. */
 export function magicRoot(src: string): string | undefined {
   const head = src.split('\n', 30).join('\n');
-  const m = /^\s*%\s*!\s*TEX\s+root\s*=\s*(.+?)\s*$/im.exec(head);
-  return m?.[1];
+  const path = /^[ \t]*%[ \t]*![ \t]*TEX[ \t]+root[ \t]*=(.*)$/im.exec(head)?.[1].trim();
+  return path || undefined;
 }
 
 export function hasDocumentClass(src: string): boolean {
@@ -26,7 +26,7 @@ export function hasDocumentClass(src: string): boolean {
 /** Files pulled in by `src`, in document order. */
 export function findIncludes(src: string): Include[] {
   const out: Include[] = [];
-  const re = /\\(input|include|subfile|usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g;
+  const re = /\\(input|include|subfile|usepackage|RequirePackage)\s*(?:\[[^\]]*\]\s*)?\{([^}]*)\}/g;
   for (const m of stripComments(src).matchAll(re)) {
     const kind = m[1] === 'usepackage' || m[1] === 'RequirePackage' ? 'sty' : 'tex';
     for (const raw of kind === 'sty' ? m[2].split(',') : [m[2]]) {

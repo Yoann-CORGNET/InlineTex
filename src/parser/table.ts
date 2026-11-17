@@ -11,8 +11,27 @@
  */
 import { matchBrace, stripComments } from './syntax';
 
-/** Commands that draw a rule; they must stay outside `\text`, at the start of a row. */
-const RULES = /^\\(hline|toprule|midrule|bottomrule|cline\s*\{[^}]*\}|cmidrule\s*(?:\([^)]*\))?\s*\{[^}]*\}|addlinespace(?:\s*\[[^\]]*\])?)\s*/;
+/**
+ * Commands that draw a rule (or, for `\addlinespace`, only add space); they must
+ * stay outside `\text`, at the start of a row.
+ */
+const RULES: { re: RegExp; hline: boolean }[] = [
+  { re: /^\\(?:hline|toprule|midrule|bottomrule)/, hline: true },
+  { re: /^\\cline\s*\{[^}]*\}/, hline: true },
+  { re: /^\\cmidrule\s*(?:\([^)]*\)\s*)?\{[^}]*\}/, hline: true },
+  { re: /^\\addlinespace(?:\s*\[[^\]]*\])?/, hline: false },
+];
+
+/** The rule command at the start of `src`: its length and whether it draws a line. */
+function leadingRule(src: string): { length: number; hline: boolean } | undefined {
+  for (const { re, hline } of RULES) {
+    const m = re.exec(src);
+    if (m) {
+      return { length: m[0].length, hline };
+    }
+  }
+  return undefined;
+}
 
 /** Read a `{...}` group at `i`: its content and the index after it. */
 function group(src: string, i: number): { value: string; end: number } | undefined {
@@ -123,9 +142,9 @@ function convertCell(cell: string): string {
 function convertRow(row: string): string {
   let rest = row.trimStart();
   let rules = '';
-  for (let m = RULES.exec(rest); m; m = RULES.exec(rest)) {
-    rules += m[1].startsWith('addlinespace') ? '' : '\\hline ';
-    rest = rest.slice(m[0].length);
+  for (let rule = leadingRule(rest); rule; rule = leadingRule(rest)) {
+    rules += rule.hline ? String.raw`\hline ` : '';
+    rest = rest.slice(rule.length).trimStart();
   }
   const cells = splitTopLevel(rest, (s, i) => (s[i] === '&' && s[i - 1] !== '\\' ? 1 : 0));
   const body = cells.length === 1 && cells[0].trim() === '' ? '' : cells.map(convertCell).join(' & ');

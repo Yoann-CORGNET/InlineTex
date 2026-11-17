@@ -65,9 +65,29 @@ export function matchBrace(src: string, open: number, withinParagraph = false): 
   return -1;
 }
 
-/** Remove `%` comments: an unescaped `%` runs to the end of the line. */
+/**
+ * Remove `%` comments: an unescaped `%` runs to the end of the line. A backslash
+ * escapes the next character only, so `\\%` is a line break then a comment.
+ */
 export function stripComments(src: string): string {
-  return src.replaceAll(/(^|[^\\])%.*$/gm, '$1');
+  let out = '';
+  let from = 0;
+  let i = 0;
+  while (i < src.length) {
+    if (src[i] === '\\') {
+      i += 2;
+    } else if (src[i] === '%') {
+      out += src.slice(from, i);
+      i = src.indexOf('\n', i);
+      if (i === -1) {
+        return out;
+      }
+      from = i;
+    } else {
+      i++;
+    }
+  }
+  return out + src.slice(from);
 }
 
 /** A `[...]` optional argument at `i` (after spaces): its content range and the index after it. */
