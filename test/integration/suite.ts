@@ -37,7 +37,7 @@ async function check(name: string, body: () => Promise<void>): Promise<void> {
 }
 
 export async function run(): Promise<void> {
-  const ext = vscode.extensions.getExtension('inlinetex.inlinetex');
+  const ext = vscode.extensions.getExtension('yoann-corgnet.inlinetex');
   assert.ok(ext, 'extension not found');
   await ext.activate();
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
