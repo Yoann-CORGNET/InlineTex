@@ -57,6 +57,14 @@ function isSpace(c: string | undefined): boolean {
   return c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
 }
 
+/** Whether the `$` at `i` closes the math: `$$` for display, a Pandoc closer for inline. */
+function isCloser(src: string, i: number, display: boolean): boolean {
+  if (display) {
+    return src[i + 1] === '$';
+  }
+  return !isSpace(src[i - 1]) && !/\d/.test(src[i + 1] ?? '');
+}
+
 /** Closing delimiter of math opened at `from`, within the paragraph; -1 if none. */
 function findClose(src: string, from: number, display: boolean): number {
   let i = from;
@@ -71,14 +79,8 @@ function findClose(src: string, from: number, display: boolean): number {
     if (blankLineAt(src, i) || (!display && c === '`')) {
       return -1;
     }
-    if (c === '$') {
-      if (display) {
-        if (src[i + 1] === '$') {
-          return i;
-        }
-      } else if (!isSpace(src[i - 1]) && !/\d/.test(src[i + 1] ?? '')) {
-        return i;
-      }
+    if (c === '$' && isCloser(src, i, display)) {
+      return i;
     }
     i++;
   }

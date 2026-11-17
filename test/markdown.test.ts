@@ -32,4 +32,13 @@ describe('scanMarkdown', () => {
     expect(tex('5\\$ et 3\\$')).toEqual([]);
     expect(tex('$a\n\nb$')).toEqual([]);
   });
+
+  it('closes math only on a valid delimiter', () => {
+    expect(tex('$$a $b$ c$$')).toEqual([['a $b$ c', true]]);
+    expect(tex('$$a `b` c$$')).toEqual([['a `b` c', true]]);
+    expect(tex('$a \\$ b$')).toEqual([['a \\$ b', false]]);
+    expect(tex('$a $ b$')).toEqual([['a $ b', false]]);
+    expect(tex('$$a$$$')).toEqual([['a', true]]);
+    expect(tex('$$a')).toEqual([]);
+  });
 });
