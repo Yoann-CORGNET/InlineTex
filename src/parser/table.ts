@@ -143,7 +143,7 @@ function convertRow(row: string): string {
   let rest = row.trimStart();
   let rules = '';
   for (let rule = leadingRule(rest); rule; rule = leadingRule(rest)) {
-    rules += rule.hline ? '\\hline ' : '';
+    rules += rule.hline ? String.raw`\hline ` : '';
     rest = rest.slice(rule.length).trimStart();
   }
   const cells = splitTopLevel(rest, (s, i) => (s[i] === '&' && s[i - 1] !== '\\' ? 1 : 0));
