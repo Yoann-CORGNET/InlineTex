@@ -16,7 +16,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Aucun script d'installation n'est nécessaire : esbuild a son binaire dans un paquet
+      # optionnel, et vsce-sign ne sert qu'à signer (--sign-tool), ce qui n'est pas fait ici.
+      - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:coverage
