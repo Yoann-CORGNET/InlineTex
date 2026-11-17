@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/Yoann-CORGNET/InlineTex/compare/v0.2.0...v0.3.0) (2026-11-17)
+
+
+### Ajouts
+
+* macros de texte suivies hors formules (renommages et textes simples) ([e5c83f6](https://github.com/Yoann-CORGNET/InlineTex/commit/e5c83f64ad343e505744748a1a5ef540d854c2f5))
+* macros de texte suivies hors formules (renommages et textes simples) ([4e3e6ad](https://github.com/Yoann-CORGNET/InlineTex/commit/4e3e6add5bdad84ab3e012df4bde6a81e0260351))
+
 ## 0.2.0
 
 ### Ajouts

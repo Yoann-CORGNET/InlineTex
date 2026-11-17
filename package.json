@@ -2,7 +2,7 @@
   "name": "inlinetex",
   "displayName": "InlineTeX",
   "description": "Édition WYSIWYG en ligne pour LaTeX : formules rendues et mise en forme directement dans l'éditeur, source révélé sous le curseur.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "yoann-corgnet",
   "license": "MIT",
   "repository": {
