@@ -6,7 +6,6 @@ import { scan } from '../parser/scan';
 import type { ImageToken, MathToken, Token } from '../parser/tokens';
 import { framedImageSvg } from '../render/image';
 import type * as MathJax from '../render/mathjax';
-import type { RenderedMath } from '../render/mathjax';
 import { resizeSvg, svgToDataUri } from '../render/svg';
 import { Lru } from '../util/lru';
 import { DecorationTypes, emptyDecorationSet, pushImage, pushText, tokenRange, type DecorationSet } from './decorations';
@@ -63,7 +62,7 @@ function macroId(macros: MacroTable): string {
 export class InlineTexController implements vscode.Disposable {
   private readonly types = new DecorationTypes();
   private readonly parsed = new Map<string, ParsedDoc>();
-  private readonly svgCache = new Lru<string, RenderedMath>(2000);
+  private readonly svgCache = new Lru<string, MathJax.RenderedMath>(2000);
   private readonly uriCache = new Lru<string, vscode.Uri>(2000);
   /** Framed pictures are large (up to a few MB each): kept apart from formulas, in a small cache. */
   private readonly imageUriCache = new Lru<string, vscode.Uri>(32);
@@ -269,7 +268,7 @@ export class InlineTexController implements vscode.Disposable {
     return `${token.display ? 'D' : 'I'}|${mathColor(this.settings)}|${exPx(m)}|${parsed.macroKey}|${token.tex}`;
   }
 
-  private render(token: MathToken, m: EditorMetrics, parsed: ParsedDoc, key = this.renderKey(token, m, parsed)): RenderedMath {
+  private render(token: MathToken, m: EditorMetrics, parsed: ParsedDoc, key = this.renderKey(token, m, parsed)): MathJax.RenderedMath {
     let r = this.svgCache.get(key);
     if (!r) {
       const opts = { color: mathColor(this.settings), exPx: exPx(m), display: token.display };
