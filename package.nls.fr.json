@@ -1,0 +1,16 @@
+{
+  "description": "Édition WYSIWYG en ligne pour LaTeX : formules rendues et mise en forme directement dans l'éditeur, source révélé sous le curseur.",
+  "command.toggle": "Activer / désactiver le rendu en ligne",
+  "command.toggleDocument": "Suspendre / reprendre le rendu pour ce fichier",
+  "config.enabled.description": "Active le rendu en ligne.",
+  "config.languages.description": "Identifiants de langage où le rendu s'applique (ajoutez « markdown » pour les formules $…$ en Markdown).",
+  "config.renderMath.description": "Remplace les formules ($…$, \\[…\\], equation, align…) par leur rendu.",
+  "config.renderTables.description": "Remplace les tableaux (tabular, tabular*, tabularx) par leur rendu.",
+  "config.renderFormatting.description": "Applique la mise en forme (\\textbf, \\emph, \\section, \\textcolor, \\href…) et remplace \\ref, \\cite, \\label et \\footnote par un texte court, en masquant les commandes.",
+  "config.renderImages.description": "Affiche un aperçu des images de \\includegraphics (PNG, JPEG, GIF, SVG ; pas PDF ni EPS).",
+  "config.revealOn.description": "Quand afficher le source LaTeX à la place du rendu.",
+  "config.scale.description": "Facteur d'échelle des formules rendues.",
+  "config.color.description": "Couleur CSS des formules (vide : déduite du thème clair ou sombre).",
+  "config.revealOn.cursor": "Le source réapparaît quand le curseur ou la sélection touche l'élément.",
+  "config.revealOn.line": "Le source réapparaît pour toute la ligne où se trouve le curseur."
+}

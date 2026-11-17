@@ -2,6 +2,9 @@
 !dist/extension.js
 !dist/fonts/*.js
 !package.json
+!package.nls.json
+!package.nls.fr.json
+!l10n/*.json
 !README.md
 !CHANGELOG.md
 !LICENSE

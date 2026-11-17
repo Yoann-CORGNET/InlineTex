@@ -63,6 +63,9 @@ encore été vérifié en conditions réelles.
   VS Code.
 - **Modifier une formule** : placez le curseur dessus (clic ou flèches), le source s'affiche.
 
+L'interface (commandes, réglages, barre d'état) est en anglais, et en français quand VS Code est
+affiché en français.
+
 ### Réglages
 
 | Clé | Défaut | Rôle |
