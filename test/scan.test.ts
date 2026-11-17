@@ -3,7 +3,7 @@ import { cssColor } from '../src/parser/commands';
 import { scan } from '../src/parser/scan';
 import { matchBrace } from '../src/parser/syntax';
 import type { FormatToken, MathToken, SymbolToken } from '../src/parser/tokens';
-import { collectMacros } from '../src/parser/macros';
+import { collectMacros, textMacros } from '../src/parser/macros';
 
 const math = (src: string) => scan(src).filter((t): t is MathToken => t.type === 'math');
 const formats = (src: string) => scan(src).filter((t): t is FormatToken => t.type === 'format');
@@ -218,6 +218,53 @@ describe('collectMacros', () => {
 
   it('ignores commented definitions', () => {
     expect(collectMacros('% \\newcommand{\\R}{x}')).toEqual({});
+  });
+});
+
+describe('textMacros', () => {
+  it('reads a one-argument wrapper as the command it wraps', () => {
+    const m = textMacros(collectMacros('\\newcommand{\\code}[1]{\\texttt{#1}}\n\\def\\eps{\\varepsilon}'));
+    expect(m).toEqual({ code: { command: 'texttt' }, eps: { command: 'varepsilon' } });
+  });
+
+  it('reads a macro without argument as its plain text', () => {
+    const m = textMacros(collectMacros('\\newcommand{\\SAT}{\\textsc{sat}}\n\\newcommand{\\cad}{c\'est-à-dire}'));
+    expect(m).toEqual({ SAT: { text: 'sat' }, cad: { text: "c'est-à-dire" } });
+  });
+
+  it('leaves anything else to the source', () => {
+    const src = [
+      '\\newcommand{\\R}{\\mathbb{R}}',
+      '\\newcommand{\\norm}[1]{\\lVert #1 \\rVert}',
+      '\\newcommand{\\afaire}[1]{\\textcolor{red}{\\textbf{#1}}}',
+      '\\newcommand{\\pair}[2]{\\texttt{#1}}',
+    ].join('\n');
+    expect(textMacros(collectMacros(src))).toEqual({});
+  });
+});
+
+describe('scan: user macros in text', () => {
+  const macros = textMacros(collectMacros('\\newcommand{\\code}[1]{\\texttt{#1}}\\newcommand{\\SAT}{\\textsc{sat}}'));
+
+  it('formats the argument of a renamed command', () => {
+    const src = 'Voir \\code{lib/encoding.ml} ici.';
+    const [t] = scan(src, macros).filter((x): x is FormatToken => x.type === 'format');
+    expect(t.kind).toBe('monospace');
+    expect(src.slice(t.start, t.end)).toBe('\\code{lib/encoding.ml}');
+    expect(src.slice(t.argStart, t.argEnd)).toBe('lib/encoding.ml');
+  });
+
+  it('draws a macro without argument as its text', () => {
+    const src = 'Le résultat est \\SAT{} ou \\SAT.';
+    const t = scan(src, macros).filter((x): x is SymbolToken => x.type === 'symbol');
+    expect(t.map((x) => [x.text, src.slice(x.start, x.end)])).toEqual([
+      ['sat', '\\SAT{}'],
+      ['sat', '\\SAT'],
+    ]);
+  });
+
+  it('ignores user macros it was not given', () => {
+    expect(formats('\\code{x}')).toEqual([]);
   });
 });
 

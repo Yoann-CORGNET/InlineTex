@@ -36,6 +36,12 @@ sont transmises à MathJax. Elles sont lues dans le fichier courant et dans le r
 - les fichiers inclus par `\input`, `\include` et `\subfile`, et les `.sty` locaux chargés par
   `\usepackage`.
 
+Dans le texte, hors formules, deux sortes de macros sont aussi suivies : le renommage d'une commande
+(`\newcommand{\code}[1]{\texttt{#1}}` s'affiche comme `\texttt`) et une macro sans argument dont
+le corps est un texte simple, éventuellement dans une seule commande de texte
+(`\newcommand{\SAT}{\textsc{sat}}` s'affiche « sat », sans les petites capitales). Les autres
+macros de texte, par exemple celles qui imbriquent plusieurs commandes, restent en source.
+
 Les commentaires `%`, les `\$` échappés et les environnements `verbatim`, `lstlisting`, `minted` et
 `comment`, ainsi que `\verb`, sont ignorés. Une formule invalide reste en source ; son erreur
 apparaît dans le panneau Problèmes, y compris pendant qu'on la corrige.

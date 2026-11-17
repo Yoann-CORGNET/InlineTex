@@ -50,8 +50,7 @@ function superscript(n: number): string {
   return [...String(n)].map((d) => SUPERSCRIPT_DIGITS[Number(d)]).join('');
 }
 
-function scanFormat(src: string, i: number, cmd: string, kind: FormatKind): Step {
-  const afterCmd = i + 1 + cmd.length;
+function scanFormat(src: string, i: number, cmd: string, afterCmd: number, kind: FormatKind): Step {
   let open = afterCmd;
   if (SECTIONING.has(cmd)) {
     open += src[open] === '*' ? 1 : 0;
@@ -197,7 +196,7 @@ export function scanInline(
   }
   const kind = FORMAT_COMMANDS[cmd];
   if (kind) {
-    return scanFormat(src, i, cmd, kind);
+    return scanFormat(src, i, cmd, afterCmd, kind);
   }
   const symbol = SYMBOLS[cmd];
   if (symbol === undefined) {

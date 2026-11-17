@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { collectMacros, type MacroTable } from '../parser/macros';
+import { collectMacros, type MacroTable, textMacros } from '../parser/macros';
 import { scanMarkdown } from '../parser/markdown';
 import { scan } from '../parser/scan';
 import type { ImageToken, MathToken, Token } from '../parser/tokens';
@@ -232,7 +232,7 @@ export class InlineTexController implements vscode.Disposable {
         version: doc.version,
         text,
         lineStarts: lineStarts(text),
-        tokens: markdown ? scanMarkdown(text) : scan(text),
+        tokens: [],
         ownMacros: collectMacros(text),
         macros: {},
         macroKey: '',
@@ -241,6 +241,8 @@ export class InlineTexController implements vscode.Disposable {
     }
     parsed.macros = { ...external.macros, ...parsed.ownMacros };
     parsed.macroKey = macroId(parsed.macros);
+    // The text uses the macros too (\code for \texttt): scan again when the project's arrive.
+    parsed.tokens = markdown ? scanMarkdown(parsed.text) : scan(parsed.text, textMacros(parsed.macros));
     parsed.externalKey = external.key;
     this.parsed.set(key, parsed);
     this.diagnostics.schedule(doc);

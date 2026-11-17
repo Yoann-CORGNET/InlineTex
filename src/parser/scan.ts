@@ -5,6 +5,7 @@
  */
 
 import { scanGraphics, scanHref, scanInline, scanTextcolor, scanUrl } from './commands';
+import type { TextMacros } from './macros';
 import { itemLabel, LIST_ENVS, parseListOptions, type ListKind, type ListLevel } from './lists';
 import {
   findClose,
@@ -42,6 +43,8 @@ interface ScanState {
   lists: ListLevel[];
   /** Last counter of each closed enumerate, by nesting depth, for enumitem's `resume`. */
   lastCounters: Map<number, number>;
+  /** User macros the scanner reads as a known command or a fixed text. */
+  macros: TextMacros;
 }
 
 /** Depth (1-based) of the innermost list among the open lists of the same kind. */
@@ -201,12 +204,19 @@ function scanCommand(src: string, i: number, state: ScanState): Step {
   if (next === '(' || next === '[') {
     return scanBracketMath(src, i);
   }
-  const cmd = readCommand(src, i);
-  if (cmd === '') {
+  const name = readCommand(src, i);
+  if (name === '') {
     // Control symbol such as \$, \%, \\ : skip both characters.
     return { next: i + 2 };
   }
-  const afterCmd = i + 1 + cmd.length;
+  const afterCmd = i + 1 + name.length;
+  const macro = Object.hasOwn(state.macros, name) ? state.macros[name] : undefined;
+  if (macro && 'text' in macro) {
+    const end = src.startsWith('{}', afterCmd) ? afterCmd + 2 : afterCmd;
+    return { token: { type: 'symbol', start: i, end, text: macro.text, style: 'symbol' }, next: end };
+  }
+  // A user macro defined as another command is read as that command.
+  const cmd = macro?.command ?? name;
   switch (cmd) {
     case 'begin':
       return scanBegin(src, i, afterCmd, state);
@@ -232,10 +242,13 @@ function scanCommand(src: string, i: number, state: ScanState): Step {
   return scanInline(src, i, cmd, afterCmd, state) ?? { next: afterCmd };
 }
 
-/** Scan a LaTeX document. Tokens come in source order (by `start`). */
-export function scan(src: string): Token[] {
+/**
+ * Scan a LaTeX document. Tokens come in source order (by `start`). `macros`
+ * are the user macros the text can use (see `textMacros`).
+ */
+export function scan(src: string, macros: TextMacros = {}): Token[] {
   const tokens: Token[] = [];
-  const state: ScanState = { footnotes: 0, lists: [], lastCounters: new Map() };
+  const state: ScanState = { footnotes: 0, lists: [], lastCounters: new Map(), macros };
   let i = 0;
   while (i < src.length) {
     const c = src[i];

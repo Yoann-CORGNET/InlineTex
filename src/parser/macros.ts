@@ -88,3 +88,43 @@ export function collectMacros(src: string): MacroTable {
   }
   return macros;
 }
+
+/**
+ * How the text scanner reads a user macro: as another command it knows
+ * (`\code` defined as `\texttt{#1}`), or as a fixed text drawn in its place.
+ */
+export type TextMacro = { command: string } | { text: string };
+export type TextMacros = Record<string, TextMacro>;
+
+/** Text with no TeX markup: it can be shown as written. */
+const PLAIN = /^[^\\{}$%#&^_~]+$/;
+
+/** A text-mode command around a plain text (`\textsc{sat}`); math ones such as `\mathbb{R}` are not text. */
+const TEXT_WRAPPER = /^\\(?:text[a-z]+|emph|mbox)\s*\{([^{}]*)\}$/;
+
+/**
+ * The macros the text scanner can follow without expanding them: renames of a
+ * command (`\newcommand{\code}[1]{\texttt{#1}}`, `\let`-like `\def\x{\y}`),
+ * and macros without argument whose body is a plain text, possibly wrapped in a
+ * single command (`\newcommand{\SAT}{\textsc{sat}}` shows `sat`). Anything
+ * else is left to the source.
+ */
+export function textMacros(macros: MacroTable): TextMacros {
+  const out: TextMacros = {};
+  for (const [name, value] of Object.entries(macros)) {
+    const [body, argc] = typeof value === 'string' ? [value.trim(), 0] : [value[0].trim(), value[1]];
+    if (argc > 1) {
+      continue;
+    }
+    const rename = argc === 1 ? /^\\([A-Za-z]+)\s*\{\s*#1\s*\}$/.exec(body) : /^\\([A-Za-z]+)$/.exec(body);
+    if (rename) {
+      out[name] = { command: rename[1] };
+      continue;
+    }
+    const text = argc === 0 ? (TEXT_WRAPPER.exec(body)?.[1] ?? body) : '';
+    if (PLAIN.test(text)) {
+      out[name] = { text };
+    }
+  }
+  return out;
+}
