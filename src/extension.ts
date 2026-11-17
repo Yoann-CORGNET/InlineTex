@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const cfg = vscode.workspace.getConfiguration('inlineTeX');
       const enabled = !cfg.get<boolean>('enabled', true);
       await cfg.update('enabled', enabled, settingTarget(cfg.inspect<boolean>('enabled')));
-      vscode.window.setStatusBarMessage(`InlineTeX ${enabled ? 'activé' : 'désactivé'}`, 2000);
+      vscode.window.setStatusBarMessage(enabled ? vscode.l10n.t('InlineTeX enabled') : vscode.l10n.t('InlineTeX disabled'), 2000);
     }),
     vscode.commands.registerCommand('inlineTeX.toggleDocument', () => controller.toggleDocument()),
   );

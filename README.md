@@ -55,11 +55,14 @@ been checked under real conditions.
 ## Usage
 
 - **Toggle rendering**: `Ctrl+Alt+I` (`Cmd+Alt+I` on macOS), active only in the languages of
-  `inlineTeX.languages`, or the command "InlineTeX : Activer / désactiver le rendu en ligne".
+  `inlineTeX.languages`, or the command "InlineTeX: Toggle inline rendering".
   The toggle writes the setting where it is defined (workspace or user).
 - **Pause a single file**: click the `TeX` indicator in the status bar, or run the command
-  "InlineTeX : Suspendre / reprendre le rendu pour ce fichier". Lasts until VS Code is closed.
+  "InlineTeX: Pause / resume rendering for this file". Lasts until VS Code is closed.
 - **Edit a formula**: put the cursor on it (click or arrow keys), the source appears.
+
+The interface (commands, settings, status bar) is in English, and in French when VS Code's display
+language is French.
 
 ### Settings
 

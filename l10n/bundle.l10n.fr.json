@@ -1,0 +1,7 @@
+{
+  "InlineTeX enabled": "InlineTeX activé",
+  "InlineTeX disabled": "InlineTeX désactivé",
+  "InlineTeX is disabled. Click to enable it.": "InlineTeX est désactivé. Cliquer pour l’activer.",
+  "Rendering paused for this file. Click to resume it.": "Rendu suspendu pour ce fichier. Cliquer pour le reprendre.",
+  "Rendering active. Click to pause it in this file.": "Rendu actif. Cliquer pour le suspendre dans ce fichier."
+}

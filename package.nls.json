@@ -1,0 +1,16 @@
+{
+  "description": "Inline WYSIWYG editing for LaTeX: formulas and formatting rendered right in the editor, source revealed under the cursor.",
+  "command.toggle": "Toggle inline rendering",
+  "command.toggleDocument": "Pause / resume rendering for this file",
+  "config.enabled.description": "Enables inline rendering.",
+  "config.languages.description": "Language identifiers where rendering applies (add \"markdown\" for $…$ formulas in Markdown).",
+  "config.renderMath.description": "Replaces formulas ($…$, \\[…\\], equation, align…) with their rendering.",
+  "config.renderTables.description": "Replaces tables (tabular, tabular*, tabularx) with their rendering.",
+  "config.renderFormatting.description": "Applies formatting (\\textbf, \\emph, \\section, \\textcolor, \\href…) and replaces \\ref, \\cite, \\label and \\footnote with short text, hiding the commands.",
+  "config.renderImages.description": "Shows a preview of \\includegraphics images (PNG, JPEG, GIF, SVG; not PDF or EPS).",
+  "config.revealOn.description": "When to show the LaTeX source instead of the rendering.",
+  "config.scale.description": "Scale factor of rendered formulas.",
+  "config.color.description": "CSS color of formulas (empty: derived from the light or dark theme).",
+  "config.revealOn.cursor": "The source reappears when the cursor or selection touches the element.",
+  "config.revealOn.line": "The source reappears for the whole line holding the cursor."
+}

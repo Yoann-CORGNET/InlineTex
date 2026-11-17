@@ -175,15 +175,15 @@ export class InlineTexController implements vscode.Disposable {
     }
     if (!this.settings.enabled) {
       this.status.text = '$(eye-closed) TeX';
-      this.status.tooltip = 'InlineTeX est désactivé. Cliquer pour l’activer.';
+      this.status.tooltip = vscode.l10n.t('InlineTeX is disabled. Click to enable it.');
       this.status.command = 'inlineTeX.toggle';
     } else if (this.paused.has(doc.uri.toString())) {
       this.status.text = '$(eye-closed) TeX';
-      this.status.tooltip = 'Rendu suspendu pour ce fichier. Cliquer pour le reprendre.';
+      this.status.tooltip = vscode.l10n.t('Rendering paused for this file. Click to resume it.');
       this.status.command = 'inlineTeX.toggleDocument';
     } else {
       this.status.text = '$(eye) TeX';
-      this.status.tooltip = 'Rendu actif. Cliquer pour le suspendre dans ce fichier.';
+      this.status.tooltip = vscode.l10n.t('Rendering active. Click to pause it in this file.');
       this.status.command = 'inlineTeX.toggleDocument';
     }
     this.status.show();
@@ -362,7 +362,7 @@ export class InlineTexController implements vscode.Disposable {
       if (r.error) {
         return undefined;
       }
-      md.appendMarkdown(`![formule](${svgToDataUri(r.svg)})`);
+      md.appendMarkdown(`![formula](${svgToDataUri(r.svg)})`);
     } else if (t.type === 'image' && this.settings.renderImages) {
       const image = this.images.get(doc, this.project.get(doc).root, t.path);
       if (!image) {

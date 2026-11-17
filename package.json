@@ -1,7 +1,7 @@
 {
   "name": "inlinetex",
   "displayName": "InlineTeX",
-  "description": "Édition WYSIWYG en ligne pour LaTeX : formules rendues et mise en forme directement dans l'éditeur, source révélé sous le curseur.",
+  "description": "%description%",
   "version": "0.3.0",
   "publisher": "yoann-corgnet",
   "license": "MIT",
@@ -34,6 +34,7 @@
     "inline preview"
   ],
   "main": "./dist/extension.js",
+  "l10n": "./l10n",
   "activationEvents": [
     "onLanguage:latex",
     "onLanguage:tex",
@@ -43,12 +44,12 @@
     "commands": [
       {
         "command": "inlineTeX.toggle",
-        "title": "Activer / désactiver le rendu en ligne",
+        "title": "%command.toggle%",
         "category": "InlineTeX"
       },
       {
         "command": "inlineTeX.toggleDocument",
-        "title": "Suspendre / reprendre le rendu pour ce fichier",
+        "title": "%command.toggleDocument%",
         "category": "InlineTeX"
       }
     ],
@@ -66,7 +67,7 @@
         "inlineTeX.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Active le rendu en ligne."
+          "description": "%config.enabled.description%"
         },
         "inlineTeX.languages": {
           "type": "array",
@@ -77,27 +78,27 @@
             "latex",
             "tex"
           ],
-          "description": "Identifiants de langage où le rendu s'applique (ajoutez « markdown » pour les formules $…$ en Markdown)."
+          "description": "%config.languages.description%"
         },
         "inlineTeX.renderMath": {
           "type": "boolean",
           "default": true,
-          "description": "Remplace les formules ($…$, \\[…\\], equation, align…) par leur rendu."
+          "description": "%config.renderMath.description%"
         },
         "inlineTeX.renderTables": {
           "type": "boolean",
           "default": true,
-          "description": "Remplace les tableaux (tabular, tabular*, tabularx) par leur rendu."
+          "description": "%config.renderTables.description%"
         },
         "inlineTeX.renderFormatting": {
           "type": "boolean",
           "default": true,
-          "description": "Applique la mise en forme (\\textbf, \\emph, \\section, \\textcolor, \\href…) et remplace \\ref, \\cite, \\label et \\footnote par un texte court, en masquant les commandes."
+          "description": "%config.renderFormatting.description%"
         },
         "inlineTeX.renderImages": {
           "type": "boolean",
           "default": true,
-          "description": "Affiche un aperçu des images de \\includegraphics (PNG, JPEG, GIF, SVG ; pas PDF ni EPS)."
+          "description": "%config.renderImages.description%"
         },
         "inlineTeX.revealOn": {
           "type": "string",
@@ -106,23 +107,23 @@
             "line"
           ],
           "enumDescriptions": [
-            "Le source réapparaît quand le curseur ou la sélection touche l'élément.",
-            "Le source réapparaît pour toute la ligne où se trouve le curseur."
+            "%config.revealOn.cursor%",
+            "%config.revealOn.line%"
           ],
           "default": "cursor",
-          "description": "Quand afficher le source LaTeX à la place du rendu."
+          "description": "%config.revealOn.description%"
         },
         "inlineTeX.scale": {
           "type": "number",
           "default": 1,
           "minimum": 0.5,
           "maximum": 3,
-          "description": "Facteur d'échelle des formules rendues."
+          "description": "%config.scale.description%"
         },
         "inlineTeX.color": {
           "type": "string",
           "default": "",
-          "description": "Couleur CSS des formules (vide : déduite du thème clair ou sombre)."
+          "description": "%config.color.description%"
         }
       }
     }
