@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/Yoann-CORGNET/InlineTex/compare/v0.3.0...v0.3.1) (2026-11-17)
+
+
+### Corrections
+
+* manifeste et interface en anglais, traduction française via package.nls et l10n ([6f1a0be](https://github.com/Yoann-CORGNET/InlineTex/commit/6f1a0be034eb4b9394726d70edf3867854b187c1))
+* manifeste et interface en anglais, traduction française via package.nls et l10n ([301bd4c](https://github.com/Yoann-CORGNET/InlineTex/commit/301bd4c90eeac1c4f648a3a63c8e97c0e239ae1f))
+
 ## [0.3.0](https://github.com/Yoann-CORGNET/InlineTex/compare/v0.2.0...v0.3.0) (2026-11-17)
 
 

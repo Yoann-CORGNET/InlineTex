@@ -2,7 +2,7 @@
   "name": "inlinetex",
   "displayName": "InlineTeX",
   "description": "%description%",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "yoann-corgnet",
   "license": "MIT",
   "repository": {
