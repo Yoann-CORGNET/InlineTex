@@ -1,91 +1,89 @@
 # Architecture
 
-InlineTeX ne remplace pas l'éditeur. Il pose des **décorations** sur l'éditeur de texte natif :
+**English** | [Français](architecture.fr.md)
 
-1. une décoration masque le source (`display: none` injecté via `textDecoration`) ;
-2. une autre insère le rendu juste avant (`before.contentIconPath` = SVG en data URI, ou
-   `before.contentText` pour les symboles et les références), ou stylise l'argument d'une commande
-   de mise en forme ;
-3. les éléments touchés par une sélection ne sont pas décorés, et le source réapparaît.
+InlineTeX does not replace the editor. It places **decorations** on the native text editor:
+
+1. one decoration hides the source (`display: none` injected through `textDecoration`);
+2. another inserts the rendering right before it (`before.contentIconPath` = SVG as a data URI, or
+   `before.contentText` for symbols and references), or styles the argument of a formatting
+   command;
+3. elements touched by a selection are not decorated, and the source reappears.
 
 ## Modules
 
-| Fichier | Rôle | Dépend de VS Code |
+| File | Role | Depends on VS Code |
 | --- | --- | --- |
-| `src/parser/tokens.ts` | Types des jetons produits par les scanners. Positions en offsets UTF-16. | non |
-| `src/parser/syntax.ts` | Lecture bas niveau : commandes, commentaires, groupes `{…}` et arguments optionnels `[…]`, délimiteurs, `\verb`. Respecte les échappements et s'arrête à une ligne vide. | non |
-| `src/parser/scan.ts` | Scanner LaTeX : boucle principale, formules, environnements (listes, tableaux, verbatim), compteurs, `\item`. | non |
-| `src/parser/commands.ts` | Commandes en ligne : mise en forme, couleurs, liens, images, symboles, références, citations, étiquettes, notes. | non |
-| `src/parser/lists.ts` | Étiquettes des éléments de liste : puces et numéros par niveau, libellés enumitem et enumerate. | non |
-| `src/parser/table.ts` | Convertit un `tabular` en `array` MathJax : spécification de colonnes adaptée, filets hors des cellules, cellules dans `\text{…}`. | non |
-| `src/parser/markdown.ts` | Scanner Markdown : formules seulement, règles de Pandoc, code ignoré. | non |
-| `src/parser/macros.ts` | Extrait `\newcommand`, `\def` et `\DeclareMathOperator` pour MathJax. | non |
-| `src/parser/project.ts` | Commentaire `% !TEX root`, détection de `\documentclass`, liste des `\input`, `\include`, `\subfile` et `\usepackage`. | non |
-| `src/render/mathjax.ts` | MathJax 4 (`@mathjax/src`, adaptateur lite) : TeX → SVG autonome (`fontCache: 'none'`), couleur figée, dimensions en px ; `checkMath` compile sans mettre en page. | non |
-| `src/render/svg.ts` | Redimensionnement d'un SVG et data URI, séparés de MathJax pour rester légers. | non |
-| `src/render/image.ts` | Noms de fichier essayés pour un `\includegraphics`, taille d'une image lue dans son en-tête (PNG, JPEG, GIF, SVG) et SVG d'encadrement. | non |
-| `src/editor/layout.ts` | Calcule la taille d'image à partir de la police, de la hauteur de ligne et du nombre de lignes disponibles. | non |
-| `src/editor/plan.ts` | Choix des jetons à décorer dans une passe : plages visibles, règle de révélation, lignes vides disponibles. Tout en offsets entiers. | non |
-| `src/util/lru.ts` | Cache borné à éviction du moins récemment utilisé. | non |
-| `src/editor/project.ts` | Lecture asynchrone des autres fichiers du projet et fusion de leurs macros. | oui |
-| `src/editor/settings.ts` | Lecture des réglages, couleur des formules selon le thème. | oui |
-| `src/editor/decorations.ts` | Types de décoration et construction des décorations d'une passe (masquage, images, symboles, mise en forme, couleurs). | oui |
-| `src/editor/images.ts` | Recherche et chargement asynchrone des images de `\includegraphics`, oubliées quand un fichier image change. | oui |
-| `src/editor/diagnostics.ts` | Erreurs TeX de chaque formule dans le panneau Problèmes, calculées par tranches. | oui |
-| `src/editor/controller.ts` | Cycle de vie : cache d'analyse par version de document, caches de rendu, passe de décoration, survol (non vérifié visuellement), barre d'état, clé de contexte `inlineTeX.languageActive`. | oui |
-| `src/extension.ts` | Activation et commandes. | oui |
+| `src/parser/tokens.ts` | Types of the tokens produced by the scanners. Positions as UTF-16 offsets. | no |
+| `src/parser/syntax.ts` | Low-level reading: commands, comments, `{…}` groups and `[…]` optional arguments, delimiters, `\verb`. Honors escapes and stops at an empty line. | no |
+| `src/parser/scan.ts` | LaTeX scanner: main loop, formulas, environments (lists, tables, verbatim), counters, `\item`. | no |
+| `src/parser/commands.ts` | Inline commands: formatting, colors, links, images, symbols, references, citations, labels, footnotes. | no |
+| `src/parser/lists.ts` | List item labels: bullets and numbers by level, enumitem and enumerate labels. | no |
+| `src/parser/table.ts` | Converts a `tabular` into a MathJax `array`: adapted column specification, rules outside cells, cells inside `\text{…}`. | no |
+| `src/parser/markdown.ts` | Markdown scanner: formulas only, Pandoc rules, code ignored. | no |
+| `src/parser/macros.ts` | Extracts `\newcommand`, `\def` and `\DeclareMathOperator` for MathJax. | no |
+| `src/parser/project.ts` | `% !TEX root` comment, `\documentclass` detection, list of `\input`, `\include`, `\subfile` and `\usepackage`. | no |
+| `src/render/mathjax.ts` | MathJax 4 (`@mathjax/src`, lite adaptor): TeX → standalone SVG (`fontCache: 'none'`), fixed color, dimensions in px; `checkMath` compiles without layout. | no |
+| `src/render/svg.ts` | SVG resizing and data URI, kept apart from MathJax to stay lightweight. | no |
+| `src/render/image.ts` | File names tried for an `\includegraphics`, image size read from its header (PNG, JPEG, GIF, SVG) and framing SVG. | no |
+| `src/editor/layout.ts` | Computes the image size from the font, the line height and the number of available lines. | no |
+| `src/editor/plan.ts` | Chooses the tokens to decorate in a pass: visible ranges, reveal rule, available empty lines. All in integer offsets. | no |
+| `src/util/lru.ts` | Bounded cache with least-recently-used eviction. | no |
+| `src/editor/project.ts` | Asynchronous reading of the other project files and merging of their macros. | yes |
+| `src/editor/settings.ts` | Reading settings, formula color based on the theme. | yes |
+| `src/editor/decorations.ts` | Decoration types and construction of a pass's decorations (hiding, images, symbols, formatting, colors). | yes |
+| `src/editor/images.ts` | Asynchronous lookup and loading of `\includegraphics` images, forgotten when an image file changes. | yes |
+| `src/editor/diagnostics.ts` | TeX errors of each formula in the Problems panel, computed in batches. | yes |
+| `src/editor/controller.ts` | Lifecycle: parse cache per document version, render caches, decoration pass, hover (not visually checked), status bar, `inlineTeX.languageActive` context key. | yes |
+| `src/extension.ts` | Activation and commands. | yes |
 
-## Points techniques
+## Technical notes
 
-- **Taille des images.** VS Code dessine une image de décoration à sa taille intrinsèque, sans tenir
-  compte de `width`/`height`. Toute réduction est donc écrite dans les attributs du SVG
-  (`resizeSvg`). Les images de `\includegraphics` sont incluses dans un SVG à la taille voulue
-  (`framedImageSvg`).
-- **Filets de tableau.** MathJax dessine filets et cadres en `<line>` et `<rect>` stylés par sa
-  feuille CSS, absente d'une image autonome : les règles nécessaires sont insérées dans le SVG
-  (`TABLE_STYLE`).
-- **Couleur.** Une image n'hérite pas de `currentColor`. La couleur est fixée dans le SVG selon
-  le type de thème actif, et tout est re-rendu quand le thème change.
-- **Data URI en base64.** C'est plus robuste que de l'UTF-8 encodé dans `Uri.parse`.
-- **Taille du ex.** MathJax raisonne en ex. On prend 1ex = 0,5 × la taille de police de l'éditeur, ce
-  qui correspond à la hauteur de x des polices monospace et aligne visuellement les formules sur le
-  texte.
-- **Glyphes de MathJax 4.** La police New Computer Modern range les glyphes rares dans des fichiers
-  « dynamiques » chargés à la demande. `esbuild.mjs` compile chacun dans `dist/fonts/`, en
-  remplaçant son import de la classe de police par une référence globale
-  (`Symbol.for('inlineTeX.mathjaxNewcmFont')`) posée par `setFontLoader`. Le chargement est
-  synchrone (`mathjax.asyncIsSynchronous`), donc une conversion n'est jamais à relancer. Les tests
-  chargent les mêmes fichiers depuis le paquet de la police.
-- **Paquets TeX.** MathJax 4 n'a plus de liste `AllPackages` : les paquets sont importés un par un
-  dans `src/render/mathjax.ts`. `noundefined` est inclus, donc une macro inconnue s'affiche en
-  rouge au lieu de produire une erreur.
-- **Chargement différé.** Le contrôleur charge `src/render/mathjax.ts` par `require` au premier
-  rendu ; esbuild l'enveloppe dans une initialisation paresseuse. L'activation en Markdown, même
-  sans rendu, ne paie donc pas le coût de MathJax.
-- **Performances.** L'analyse porte sur tout le document, une fois par version. Pendant la frappe,
-  l'événement de sélection n'a pas d'effet tant que la nouvelle version n'est pas analysée : seule
-  la passe différée de 150 ms s'exécute. Une passe ne traite que les jetons visibles (plus 30
-  lignes de marge). Les SVG, les data URI finales et les erreurs sont en cache LRU, et un document
-  MathJax est gardé par jeu de macros.
-- **Listes.** Le scanner garde la pile des environnements de liste ouverts (`ScanState.lists`) :
-  chaque `\item` prend la puce ou le numéro de son niveau, compté parmi les listes du même type.
-  `\begin` et `\end` des listes donnent un jeton `muted` (grisé, rien de masqué).
-- **Tableaux.** MathJax n'a pas de `tabular`, mais son `array` accepte les mêmes filets, `@{}`,
-  `*{n}{}`. Il ne connaît en revanche ni `\multicolumn`, ni `\multirow`, ni `\cline`, ni booktabs
-  (`noundefined` les affiche en rouge sans erreur : les tests cherchent ce rouge) ; ils sont
-  approchés. La conversion enveloppe chaque cellule dans
-  `\text{…}`, où `$…$` et `\textbf` restent valides. Les colonnes `p`, `m`, `b` sont déjà en mode
-  texte (`\text` y échoue) et `X` est inconnu : elles deviennent `l`. Le jeton produit est un
-  `MathToken` marqué `table`, rendu par le même pipeline que les formules.
-- **Diagnostics.** Toutes les formules sont compilées (sans mise en page) 300 ms après une
-  modification, par tranches de 100 pour ne pas bloquer l'éditeur.
-- **Macros du projet.** `ProjectMacros` cherche le fichier racine, parcourt ses inclusions dans
-  l'ordre (64 fichiers au plus) et rend les macros trouvées. Le fichier en cours d'édition est
-  suivi mais pas collecté : ses macros sont lues en direct et l'emportent. Un enregistrement ou une
-  modification sur disque d'un `.tex` ou d'un `.sty` relance la recherche.
+- **Image size.** VS Code draws a decoration image at its intrinsic size, ignoring
+  `width`/`height`. Any scaling is therefore written into the SVG attributes (`resizeSvg`).
+  `\includegraphics` images are embedded in an SVG at the desired size (`framedImageSvg`).
+- **Table rules.** MathJax draws rules and frames as `<line>` and `<rect>` styled by its CSS
+  stylesheet, which is missing from a standalone image: the required rules are inserted into the
+  SVG (`TABLE_STYLE`).
+- **Color.** An image does not inherit `currentColor`. The color is fixed in the SVG based on the
+  active theme kind, and everything is re-rendered when the theme changes.
+- **Base64 data URI.** More robust than UTF-8 encoded through `Uri.parse`.
+- **Size of the ex.** MathJax works in ex units. We take 1ex = 0.5 × the editor font size, which
+  matches the x-height of monospace fonts and visually aligns formulas with the text.
+- **MathJax 4 glyphs.** The New Computer Modern font stores rare glyphs in "dynamic" files loaded
+  on demand. `esbuild.mjs` compiles each one into `dist/fonts/`, replacing its import of the font
+  class with a global reference (`Symbol.for('inlineTeX.mathjaxNewcmFont')`) set by
+  `setFontLoader`. Loading is synchronous (`mathjax.asyncIsSynchronous`), so a conversion never
+  needs to be retried. Tests load the same files from the font package.
+- **TeX packages.** MathJax 4 no longer has an `AllPackages` list: packages are imported one by one
+  in `src/render/mathjax.ts`. `noundefined` is included, so an unknown macro is shown in red
+  instead of raising an error.
+- **Lazy loading.** The controller loads `src/render/mathjax.ts` with `require` on the first
+  render; esbuild wraps it in a lazy initializer. Activation in Markdown, even without rendering,
+  therefore does not pay the cost of MathJax.
+- **Performance.** The whole document is parsed, once per version. While typing, the selection
+  event has no effect until the new version has been parsed: only the 150 ms deferred pass runs. A
+  pass only processes visible tokens (plus a 30-line margin). SVGs, final data URIs and errors are
+  kept in an LRU cache, and one MathJax document is kept per macro set.
+- **Lists.** The scanner keeps the stack of open list environments (`ScanState.lists`): each
+  `\item` takes the bullet or number of its level, counted among lists of the same type. `\begin`
+  and `\end` of lists produce a `muted` token (dimmed, nothing hidden).
+- **Tables.** MathJax has no `tabular`, but its `array` accepts the same rules, `@{}` and
+  `*{n}{}`. It does not know `\multicolumn`, `\multirow`, `\cline` or booktabs, though
+  (`noundefined` shows them in red without an error: tests look for that red); they are
+  approximated. The conversion wraps each cell in `\text{…}`, where `$…$` and `\textbf` remain
+  valid. `p`, `m`, `b` columns are already in text mode (`\text` fails there) and `X` is unknown:
+  they become `l`. The resulting token is a `MathToken` flagged `table`, rendered by the same
+  pipeline as formulas.
+- **Diagnostics.** All formulas are compiled (without layout) 300 ms after a change, in batches of
+  100 so as not to block the editor.
+- **Project macros.** `ProjectMacros` looks for the root file, walks its inclusions in order (64
+  files at most) and returns the macros found. The file being edited is tracked but not
+  collected: its macros are read live and take precedence. Saving or changing a `.tex` or `.sty`
+  file on disk restarts the lookup.
 
-## Vérification
+## Verification
 
-`npm test` couvre les parties pures. La partie décorations ne peut pas être relue par l'API de
-VS Code et se vérifie à l'œil dans la fenêtre de développement (F5) avec `samples/demo.tex`,
-`samples/chapitre.tex` et `samples/demo.md`.
+`npm test` covers the pure parts. The decoration part cannot be read back through the VS Code API
+and is checked by eye in the development window (F5) with `samples/demo.tex`,
+`samples/chapitre.tex` and `samples/demo.md`.
