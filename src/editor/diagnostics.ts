@@ -62,12 +62,7 @@ export class MathDiagnostics implements vscode.Disposable {
         }
       }
       const t = math[i];
-      const key = `${t.display ? 'D' : 'I'}|${parsed.macroKey}|${t.tex}`;
-      let error = this.errors.get(key);
-      if (error === undefined) {
-        error = this.source.check(t.tex, t.display, parsed.macros, parsed.macroKey) ?? null;
-        this.errors.set(key, error);
-      }
+      const error = this.errorOf(t, parsed.macros, parsed.macroKey);
       if (error !== null) {
         const message = t.table ? `Tableau : ${error}` : error;
         const d = new vscode.Diagnostic(tokenRange(doc, t), message, vscode.DiagnosticSeverity.Error);
@@ -76,6 +71,17 @@ export class MathDiagnostics implements vscode.Disposable {
       }
     }
     this.collection.set(doc.uri, found);
+  }
+
+  /** TeX error of a formula, or null, cached by display mode, macros and source. */
+  private errorOf(t: MathToken, macros: MacroTable, macroKey: string): string | null {
+    const key = `${t.display ? 'D' : 'I'}|${macroKey}|${t.tex}`;
+    let error = this.errors.get(key);
+    if (error === undefined) {
+      error = this.source.check(t.tex, t.display, macros, macroKey) ?? null;
+      this.errors.set(key, error);
+    }
+    return error;
   }
 
   dispose(): void {
