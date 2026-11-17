@@ -118,6 +118,7 @@ npm install
 npm run build       # bundle esbuild → dist/extension.js
 npm run watch       # rebuild continu
 npm test            # tests unitaires (vitest) : parseur, macros, rendu MathJax, mise en page
+npm run test:coverage  # idem, avec un rapport de couverture dans coverage/ (lcov, lu par SonarCloud)
 npm run test:integration  # tests dans un vrai VS Code, sur le bundle de production
 npm run typecheck   # tsc --noEmit
 npm run lint        # Biome (lint seul ; typescript-eslint ne prend pas en charge TypeScript 7)
