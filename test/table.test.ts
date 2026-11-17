@@ -64,4 +64,11 @@ describe('scan: tables', () => {
   it('leaves an unclosed tabular as source', () => {
     expect(scan('\\begin{tabular}{l} a \n\nsuite').filter((x) => x.type === 'math')).toEqual([]);
   });
+
+  it('reads rules with their options and stays linear on long runs of spaces', () => {
+    expect(tabularToArray('l', '\\cline {1-1} \\addlinespace [2pt] a')).toContain('\\hline \\text{a}');
+    const out = tabularToArray('l', `\\cmidrule${' '.repeat(100_000)}x`);
+    expect(out).not.toContain('\\hline');
+    expect(out).toContain('x}');
+  });
 });
