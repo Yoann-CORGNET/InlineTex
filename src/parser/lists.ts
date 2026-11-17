@@ -43,7 +43,7 @@ function roman(n: number): string {
 }
 
 const COUNTERS: Record<string, (n: number) => string> = {
-  arabic: (n) => String(n),
+  arabic: String,
   alph: alph,
   Alph: (n) => alph(n).toUpperCase(),
   roman: roman,

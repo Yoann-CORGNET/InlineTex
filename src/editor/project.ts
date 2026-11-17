@@ -90,7 +90,7 @@ export class ProjectMacros implements vscode.Disposable {
   private invalidate(): void {
     this.texts.clear();
     // Keep the previous result until the new one lands, so nothing flickers.
-    for (const key of [...this.resolved.keys()]) {
+    for (const key of this.resolved.keys()) {
       const doc = openDocument(key);
       if (doc) {
         this.start(doc, () => this.running.delete(key));

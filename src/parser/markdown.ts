@@ -27,7 +27,7 @@ function skipFence(src: string, i: number): number {
   while (line < src.length) {
     const text = src.slice(line, nextLine(src, line));
     const close = FENCE.exec(text);
-    if (close && close[1][0] === marker[0] && close[1].length >= marker.length && text.trim() === close[1]) {
+    if (close?.[1].startsWith(marker[0]) && close[1].length >= marker.length && text.trim() === close[1]) {
       return nextLine(src, line);
     }
     line = nextLine(src, line);
