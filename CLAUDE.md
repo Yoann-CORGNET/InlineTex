@@ -19,3 +19,5 @@ Extension VS Code de rendu WYSIWYG en ligne pour LaTeX.
 - Lint avec Biome : typescript-eslint dépend de l'API JavaScript de TypeScript, absente de la v7.
 - MathJax 4 : les glyphes rares sont dans `dist/fonts/`, construits par `esbuild.mjs`. Voir
   « Glyphes de MathJax 4 » dans l'architecture avant de toucher au rendu ou au bundling.
+- Messages de commit au format Conventional Commits (`feat:`, `fix:`, `perf:`, `docs:`, `test:`, `ci:`,
+  `chore:`), description en français : Release Please en déduit la version et le CHANGELOG.

@@ -124,6 +124,17 @@ et charge `samples/demomacros.sty`. `samples/demo.md` sert à vérifier le mode 
 
 L'architecture est décrite dans [docs/architecture.md](docs/architecture.md).
 
+## Publication
+
+Les versions sont publiées par [Release Please](https://github.com/googleapis/release-please) à
+partir des messages de commit au format [Conventional Commits](https://www.conventionalcommits.org/fr/)
+(`feat:` pour un ajout, `fix:` pour une correction, `perf:` pour une amélioration de performance ;
+`docs:`, `test:`, `ci:` ou `chore:` ne déclenchent pas de version). À chaque push sur `main`, une PR
+de release tient à jour la version et le CHANGELOG ; la merger crée le tag et la Release GitHub (avec le
+`.vsix`), et publie l'extension sur le Marketplace de VS Code. Le workflow `Release` peut aussi
+être lancé à la main depuis l'onglet Actions : il publie la version de `package.json` et crée la
+Release si elle manque.
+
 ## Licence
 
 MIT
